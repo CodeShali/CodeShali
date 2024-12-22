@@ -1,7 +1,3 @@
-# Deploy to Azure Kubernetes Service
-# Build and push image to Azure Container Registry; Deploy to Azure Kubernetes Service
-# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
-
 trigger:
 - main
 
@@ -9,12 +5,10 @@ resources:
 - repo: self
 
 variables:
-
-  # Container registry service connection established during pipeline creation
   dockerRegistryServiceConnection: '67bb67ba-9b31-4916-a3e8-869707f4ee85'
   imageRepository: 'akscodeshali'
   containerRegistry: 'codeshali.azurecr.io'
-  dockerfilePath: 'src/Dockerfile'
+  dockerfilePath: 'src/Dockerfile'  # Path to Dockerfile in the src folder
   tag: '$(Build.BuildId)'
   imagePullSecret: 'codeshali1837ec3a-auth'
 
@@ -30,6 +24,13 @@ stages:
     displayName: Build
     pool: self-hosted
     steps:
+    
+    # Step to list files in the repository for debugging purposes
+    - script: |
+        echo "Listing files in the repository:"
+        ls -R
+      displayName: 'List files in repository'
+    
     - task: Docker@2
       displayName: Build and push an image to container registry
       inputs:
@@ -37,6 +38,7 @@ stages:
         repository: $(imageRepository)
         dockerfile: $(dockerfilePath)
         containerRegistry: $(dockerRegistryServiceConnection)
+        buildContext: $(Build.SourcesDirectory)  # Set build context to the root of the repository
         tags: |
           $(tag)
 
@@ -75,4 +77,3 @@ stages:
                 $(imagePullSecret)
               containers: |
                 $(containerRegistry)/$(imageRepository):$(tag)
-
