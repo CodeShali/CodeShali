@@ -1,0 +1,19 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: akscodeshali 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: akscodeshali
+  template:
+    metadata:
+      labels:
+        app: akscodeshali 
+    spec:
+      containers:
+        - name: akscodeshali 
+          image: codeshali.azurecr.io/akscodeshali
+          ports:
+          - containerPort: 5000
