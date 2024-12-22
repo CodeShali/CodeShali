@@ -14,7 +14,7 @@ variables:
   dockerRegistryServiceConnection: '67bb67ba-9b31-4916-a3e8-869707f4ee85'
   imageRepository: 'akscodeshali'
   containerRegistry: 'codeshali.azurecr.io'
-  dockerfilePath: '**/Dockerfile'
+  dockerfilePath: 'src/Dockerfile'
   tag: '$(Build.BuildId)'
   imagePullSecret: 'codeshali1837ec3a-auth'
 
