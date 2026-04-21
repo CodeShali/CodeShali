@@ -98,7 +98,11 @@ class _HealthHandler(BaseHTTPRequestHandler):
 
 def _start_health_server() -> None:
     port = int(os.getenv("HEALTH_PORT", "5000"))
-    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    try:
+        server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    except OSError:
+        logger.warning("Port %d already in use — health server skipped.", port)
+        return
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
     logger.info("Health endpoint listening on port %d", port)
