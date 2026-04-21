@@ -1,0 +1,85 @@
+SHASHANK GUNDU
+Solutions Architect  |  ServiceNow Integration & Platform  |  AI Engineering  |  Identity & Security
+513-908-1855  |  shashank.cas@gmail.com  |  linkedin.com/in/shashank-gundu-0276a817a
+PROFESSIONAL SUMMARY
+Senior Solutions Architect with over 10 years of experience building enterprise platforms across ServiceNow, cloud identity, and AI-driven automation. Strong background designing Integration Hub Spoke architecture, writing REST and SOAP API contracts that connect ServiceNow to both cloud services and on-premise systems running over MID Server, and building Flow Designer orchestration layers that handle complex multi-step workflows. Has developed React-based citizen and employee-facing portals, built agentic AI pipelines using OpenAI and Google GenAI toolkits, and engineered conversational assistants that move data from unstructured external channels into structured platform records. Led large-scale identity platform migrations covering over 65 million user objects with zero downtime across healthcare and telecommunications enterprises. Certified ServiceNow Application Developer and Azure AI Engineer with a track record on compliance-sensitive, high-volume public-facing programs.
+TECHNICAL SKILLS
+ServiceNow	Integration Hub, Flow Designer, Glide Scripting, REST/SOAP/JDBC Spokes, Scripted REST APIs, Business Rules, Client Scripts, PSDS, Configurable Workspaces, MID Server, Vault, LES, ATF, IGA, CAD
+Integration & APIs	REST, SOAP/WSDL, JDBC, OAuth 2.0, SAML 2.0, SCIM 2.0, OpenID Connect, Transform Maps, Import Sets, JSON/XML payload design, event-driven integration patterns
+AI & GenAI	Google GenAI (Vertex AI, Gemini API), OpenAI APIs, RAG pipelines, Milvus vector DB, agentic AI workflow design, Azure Bot Service, Microsoft Copilot Studio, LLM prompt engineering
+Front-End	React.js, JavaScript (ES6+), Redux, Redux Toolkit, React Query, HTML5/CSS3, Microsoft Power Apps, responsive UI design, component-based architecture
+Cloud & IAM	Azure AD, Azure AKS, Azure Key Vault, AWS Cognito, Saviynt, PingFederate, PingDirectory, Okta, CyberArk, Kubernetes RBAC, ForgeRock
+Automation	Python (ldap3, pandas, Flask, FastAPI), PowerShell, Bash, Ansible, Azure DevOps CI/CD, GitHub Actions
+Security & Standards	LDAP, Kerberos, TLS 1.2+, PKI, NIST 800-53, HIPAA, IRS Pub 1075, WCAG 2.1 AA, Zero Trust, field-level encryption, RBAC/ABAC
+Platforms & OS	Linux (RHEL, Ubuntu), Windows Server, Solaris, Active Directory, Oracle OUD, ForgeRock DS, Radiant Logic VDS
+CERTIFICATIONS
+Azure AI Engineer Associate  |  ServiceNow Certified Application Developer (CAD #27105069)
+PROFESSIONAL EXPERIENCE
+Solutions Architect	Nov 2023 – Present
+Ven Solutions (Enterprise Technology Client)  |  Remote
+•	Designed the overall Integration Hub architecture for a large enterprise platform, breaking down each external system dependency into its own dedicated Spoke with scoped credentials, versioned action definitions, and isolated error handling so failures in one connection never affected other integrations.
+•	Built a Google GenAI integration using Vertex AI and Gemini API where incoming structured data payloads from an external channel are classified, enriched with context pulled from a knowledge base, and handed off to a downstream processing flow — the Gemini layer handles intent detection and data normalization before anything touches the platform.
+•	Developed an agentic AI workflow on FastAPI where an orchestration agent autonomously queries an OpenAI-backed retrieval layer sitting on a Milvus vector store, pulls the most relevant resolution context from historical data, and returns a structured action recommendation to a consuming workflow without a human in the loop.
+•	Built a React portal for internal operations teams using Redux for global state and React Query for server-state caching, with a reusable component library covering form inputs, confirmation modals, tabular data views, and status indicators — all responsive and accessible down to mobile breakpoints.
+•	Designed a conversational AI assistant using Azure Bot Service and Microsoft Bot Framework where users interact through a React front-end in Teams; the bot collects structured data through guided conversation turns, validates it client-side using JavaScript, and submits completed payloads via REST API to backend services.
+•	Architected the consolidation of three legacy workflow platforms into a single ServiceNow instance, designing the data model mapping, staging table structure, and field-level transformation rules that ensured every historical record arrived in the new system with referential integrity intact.
+•	Developed custom ServiceNow scoped applications with UI Policies that dynamically show and hide form sections based on real-time field state, Client Scripts that run inline validation as users type, and server-side Business Rules in Glide Script that enforce cross-record consistency checks before records commit.
+•	Built a Python Flask service that sits between ServiceNow and a SOAP-based enterprise system, translating outbound ServiceNow REST calls into SOAP envelopes and parsing XML responses back into JSON before returning them — ServiceNow talks REST the whole time and never sees the legacy protocol.
+•	Designed Flow Designer sub-flows with parallel execution branches so multiple external service calls run simultaneously rather than sequentially, cutting the wall-clock time for complex workflows by roughly 60% compared to the prior linear execution model.
+•	Set up MID Server clusters with worker thread tuning and encrypted channel configuration, handling connectivity to on-premise systems that had no direct internet exposure and needed all traffic proxied through the MID layer.
+•	Developed React components with lazy loading and memoization for a data-heavy reporting portal, keeping initial page load under 1.5 seconds even when rendering large tabular datasets by virtualizing rows and paginating API requests.
+•	Optimized ServiceNow CMDB by redesigning the CI relationship model and introducing a caching layer for frequently queried discovery data, which reduced storage costs by 20% and brought stale record rates down from 18% to under 2%.
+Security Architect	Jan 2022 – Nov 2023
+Kaiser Permanente  |  St. Louis, MO
+•	Designed and built JML lifecycle automation in ServiceNow IGA using Flow Designer, handling onboarding, role change, and offboarding events end to end — each event type had its own sub-flow covering role assignment, access provisioning into Azure AD, manager notification, and final access revocation.
+•	Built over 200 identity workflow configurations in ServiceNow IGA that kept Azure AD group state in sync with approved role sets, using SCIM 2.0 connectors to push group membership changes the moment an IGA decision was recorded rather than waiting for a nightly batch.
+•	Wrote custom JavaScript rules in ServiceNow IGA for Segregation of Duties enforcement, computing a dynamic risk score for each access request based on the combination of roles being requested and routing high-risk combinations to a secondary approval tier automatically.
+•	Connected ServiceNow IGA to Okta using REST API event subscriptions, so approved provisioning decisions in ServiceNow triggered Okta group assignments and app entitlement changes in near real time without any manual handoff between systems.
+•	Designed catalog items in ServiceNow with multi-stage variable sets and JavaScript-driven dynamic choice lists that filtered available entitlements based on the requester's department, location, and current role set.
+•	Ran governance audits using ServiceNow compliance reporting capabilities, producing access certification campaigns that identified over 3,000 dormant accounts and flagged several hundred over-privileged roles for cleanup across a 90,000-user environment.
+•	Developed custom JavaScript in ServiceNow IGA for entitlement conflict detection, flagging access pairs that violated SoD policy at request time and generating a compliance exception record that required CISO-level sign-off before the request could proceed.
+•	Containerized PingDirectory on Kubernetes with resource limits and liveness probes, writing Python ldap3 scripts for reconciliation jobs that ran hourly and surfaced any attribute drift between ServiceNow, Azure AD, and the PingDirectory store.
+•	Migrated 65M+ user identity records from Oracle OUD to PingDirectory using a custom Python framework with parallel batch workers, pre-migration schema validation, and an automated post-run diff report comparing source and target record counts per OU.
+•	Configured Saviynt PAM with Azure Key Vault integration to rotate SSH keys on a weekly schedule and record privileged sessions for audit purposes, covering 400+ privileged accounts across production infrastructure.
+•	Built Splunk dashboards fed from ServiceNow IAM audit exports to give the security team visibility into access patterns, surfacing anomalous off-hours provisioning events and accounts with accelerating entitlement growth.
+•	Ran role mining in Saviynt's Role Modeling engine across 150+ enterprise applications, reducing the total number of discrete entitlements by consolidating fine-grained permissions into 85 well-defined business roles.
+Full-Stack Developer – Security	May 2021 – Jan 2022
+Apple Inc.  |  Austin, TX
+•	Containerized PingFederate and PingAccess on Azure Kubernetes Service with F5 load balancing across pods, managing the SSO federation layer for over 200 enterprise applications using SAML 2.0 and OAuth 2.0.
+•	Built CI/CD pipelines for the Ping Identity configuration stack in Azure DevOps, automating the promotion of federation config changes through dev, staging, and production — eliminating a process that previously required manual XML file edits on each environment.
+•	Configured Azure AD Conditional Access policies with risk-based authentication signals and Azure AD Connect sync rules for hybrid JML processing, keeping on-prem AD and Azure AD identity state consistent throughout the employee lifecycle.
+•	Developed serverless Azure Functions for IAM event processing, handling credential rotation triggers and secret versioning in Azure Key Vault without any persistent infrastructure to maintain.
+•	Wrote Python pandas scripts for directory sync validation, loading source and target attribute snapshots into DataFrames and generating diff reports that gave the migration team a clear view of what had and had not transferred correctly.
+•	Built React-based internal tooling screens for the IAM operations team covering federation health dashboards, manual sync triggers, and an access log viewer — reduced the team's reliance on direct Ping admin console access for routine operational tasks.
+•	Automated TLS certificate lifecycle across all Ping nodes using Ansible, generating renewal requests 30 days before expiry and applying updated certificates through a rolling update playbook with zero authentication downtime.
+•	Integrated PingID with enterprise mobile apps using OAuth 2.0 device authorization flow, adding MFA coverage to native iOS and Android applications without requiring users to switch to a web browser for authentication.
+Identity Security Engineer	Jan 2018 – May 2021
+Charter Communications  |  Denver, CO
+•	Led the migration of 65M+ LDAP entries from Oracle OUD to PingDirectory and Okta, writing a Python framework using ldap3 with configurable batch sizes, retry logic on transient failures, and a reconciliation step that compared entry counts and attribute checksums between source and target after each batch.
+•	Containerized PingDirectory cluster nodes on Kubernetes using Docker with custom Python provisioning scripts, automating node join sequences, replication agreement setup, and rolling upgrade procedures.
+•	Built Flask web apps for internal LDAP management giving IAM operations teams a browser interface for attribute searches, bulk edits, and group membership management — replaced a process that previously required LDAP CLI tools.
+•	Configured Ping Data Sync for continuous Oracle-to-PingDirectory replication, tuning change log polling intervals and pipeline thread counts to keep attribute propagation lag under one second across a multi-site topology.
+•	Designed the PKI infrastructure for TLS-secured LDAP across Windows and Linux environments, covering certificate issuance, CRL distribution, and rotation procedures — also implemented Kerberos SSO for Linux servers integrated into the Windows Active Directory domain.
+•	Integrated ServiceNow into LDAP incident workflows by writing Scripted REST API endpoints in ServiceNow that received event payloads from directory monitoring tools and kicked off automated remediation sub-flows based on the error type.
+•	Implemented quarterly access certifications in SailPoint IIQ using JML trigger events, and wrote PowerShell scripts for AD group lifecycle management covering automatic group expiry, membership cleanup, and owner notification.
+•	Configured Azure MFA for all privileged administrator accounts on identity infrastructure and implemented Azure AD Connect with custom sync rules for fine-grained attribute filtering between on-prem and cloud.
+Identity Engineer	Aug 2017 – Jan 2018
+Walgreens Inc.  |  Deerfield, IL
+•	Migrated Radiant Logic VDS to Oracle Unified Directory, updating schema definitions for custom attribute types and configuring multi-master replication across two geographically separated data centers to maintain active-active availability.
+•	Enforced TLS 1.2 across all LDAP directory communications by updating cipher suite configurations on directory instances and load balancer listeners, replacing legacy SSLv3 and TLS 1.0 connections that were failing security audits.
+•	Configured Oracle Directory Server Manager for enterprise administration delegation and implemented Azure AD SSO for employee login, replacing an LDAP-bind-based authentication flow that required credentials to pass through the application layer.
+•	Wrote Python scripts for pre- and post-migration LDAP data validation, comparing entry counts, attribute presence rates, and objectClass distributions between the Radiant Logic source and the OUD target to confirm clean transfer.
+•	Built Bash cron jobs for scheduled LDAP directory backups covering full and incremental runs, with a post-backup integrity check that compared backup manifests against live directory state and sent alerts on any discrepancy.
+Security Consultant – Identity Infrastructure	Jun 2014 – Aug 2017
+American Airlines / Genentech  |  Dallas, TX  |  San Francisco, CA
+•	Migrated ForgeRock OpenAM/OpenDJ from on-premise hardware to AWS EC2, configuring OpenIDM as the synchronization layer between Active Directory and LDAP and setting up SSL certificate-based replication across two AWS availability zones.
+•	Developed custom OpenAM authentication modules in Java to support SSO for legacy applications that could not use standard SAML or OAuth flows, implementing custom session token validation and adaptive challenge logic based on client IP and device fingerprint.
+•	Wrote AWS CloudFormation templates for repeatable ForgeRock component deployment, parameterizing instance types, security group rules, and IAM role bindings so the same template covered dev, staging, and production with environment-specific overrides.
+•	Built AWS Lambda functions to monitor LDAP directory health metrics, triggering SNS alerts and automated remediation actions when replication lag spiked or a directory node missed consecutive health checks.
+•	Configured AWS Direct Connect to provide low-latency private connectivity between on-premise directory clusters and AWS-hosted identity services, replacing a VPN path that had intermittent throughput issues under load.
+•	Deployed Sun One LDAP Directory on Solaris and configured SiteMinder policy server for cross-domain SSO, setting up multi-master replication across three data centers and tuning cache sizes and worker thread counts to handle peak authentication load.
+•	Configured eDirectory 8.8 on Solaris 10 zones with Quest ActiveRoles Server for delegated administration, defining role-based management scopes that let regional IT teams manage accounts within their own OUs without broader directory access.
+•	Performed LDAP and SiteMinder infrastructure performance analysis using query execution logs and federation audit trails, identifying slow-running searches and index gaps that were adding 200-300ms to average authentication response times.
+EDUCATION
+Master's in Computers and Data Science  —  University of Texas
+Bachelor's in Information Technology  —  Gandhi Institute of Technology and Management
