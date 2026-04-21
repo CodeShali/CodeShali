@@ -71,7 +71,7 @@ def _score_batch(batch: list[dict], resume_summary: str) -> list[dict]:
 
     client = _get_client()
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},

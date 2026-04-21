@@ -33,7 +33,7 @@ def analyze_resume(resume_text: str) -> dict:
     location_override = os.getenv("JOB_LOCATION", "")
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
