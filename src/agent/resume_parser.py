@@ -1,26 +1,42 @@
 import logging
-from docx import Document
+import os
 
 logger = logging.getLogger(__name__)
 
 
 def parse_resume(path: str) -> str:
+    ext = os.path.splitext(path)[1].lower()
+
+    if ext == ".docx":
+        text = _parse_docx(path)
+    else:
+        # Plain text or no extension (e.g. src/agent/myresume)
+        text = _parse_text(path)
+
+    logger.info("Resume parsed: %d characters from '%s'", len(text), path)
+    return text
+
+
+def _parse_docx(path: str) -> str:
+    from docx import Document
     doc = Document(path)
     lines = []
 
     for para in doc.paragraphs:
-        text = para.text.strip()
-        if text:
-            lines.append(text)
+        t = para.text.strip()
+        if t:
+            lines.append(t)
 
-    # Also pull text from tables (some resumes use table layouts)
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
-                text = cell.text.strip()
-                if text and text not in lines:
-                    lines.append(text)
+                t = cell.text.strip()
+                if t and t not in lines:
+                    lines.append(t)
 
-    resume_text = "\n".join(lines)
-    logger.info("Resume parsed: %d characters", len(resume_text))
-    return resume_text
+    return "\n".join(lines)
+
+
+def _parse_text(path: str) -> str:
+    with open(path, "r", encoding="utf-8", errors="replace") as fh:
+        return fh.read().strip()

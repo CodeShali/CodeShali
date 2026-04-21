@@ -37,10 +37,10 @@ from agent.email_sender import send_digest
 def run_pipeline() -> None:
     logger.info("=== Job search pipeline started ===")
 
-    resume_path = os.getenv("RESUME_PATH", "/app/resume/resume.docx")
+    resume_path = os.getenv("RESUME_PATH", "/app/agent/myresume")
 
     if not os.path.exists(resume_path):
-        logger.error("Resume not found at '%s'. Mount your resume.docx and retry.", resume_path)
+        logger.error("Resume not found at '%s'. Check RESUME_PATH.", resume_path)
         return
 
     try:
