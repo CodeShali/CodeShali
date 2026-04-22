@@ -203,11 +203,13 @@ def _apply_one(
             record_application(job, "failed", str(exc))
             return "failed"
 
-    # If redirected off Indeed it's an external application
+    # If redirected off Indeed → hand off to the vision web agent
     if "indeed.com" not in apply_page.url:
-        logger.info("External ATS detected for '%s' — skipping.", title)
-        record_application(job, "skipped", "external ATS")
-        return "skipped"
+        logger.info("External ATS detected for '%s' (%s) — handing to web agent.", title, apply_page.url)
+        from agent.applier.web_agent import run_web_agent
+        status = run_web_agent(apply_page, job, resume_text, resume_pdf_path)
+        record_application(job, status, f"external ATS: {apply_page.url}")
+        return status
 
     if _has_captcha(apply_page):
         logger.warning("CAPTCHA on application for '%s' — skipping.", title)
