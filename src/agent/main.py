@@ -10,8 +10,6 @@ import argparse
 import logging
 import os
 import sys
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -26,34 +24,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger("job_agent")
 
-# Lazy imports so startup errors are clearer
+from agent.database import init_db
 from agent.resume_parser import parse_resume
 from agent.job_analyzer import analyze_resume
 from agent.job_searcher import search_all_boards
 from agent.relevance_scorer import score_and_filter
 from agent.email_sender import send_digest
+from agent.alert_sender import send_alerts
+from agent.web_server import start_web_server
+from agent import database as db
 
 
-def run_pipeline() -> None:
+def run_pipeline(resume_text: str) -> None:
     logger.info("=== Job search pipeline started ===")
 
-    _default_resume = os.path.join(os.path.dirname(__file__), "myresume")
-    resume_path = os.getenv("RESUME_PATH", _default_resume)
-
-    if not os.path.exists(resume_path):
-        logger.error("Resume not found at '%s'. Check RESUME_PATH.", resume_path)
-        return
-
-    try:
-        resume_text = parse_resume(resume_path)
-    except Exception as exc:
-        logger.error("Failed to parse resume: %s", exc)
+    if not resume_text:
+        logger.error("No resume text available — aborting pipeline.")
         return
 
     try:
         profile = analyze_resume(resume_text)
     except Exception as exc:
-        logger.error("GPT resume analysis failed: %s", exc)
+        logger.error("Resume analysis failed: %s", exc)
         return
 
     try:
@@ -63,7 +55,7 @@ def run_pipeline() -> None:
         return
 
     if not jobs:
-        logger.warning("No jobs found — skipping email.")
+        logger.warning("No new jobs found — skipping email.")
         return
 
     try:
@@ -73,11 +65,22 @@ def run_pipeline() -> None:
         return
 
     if not scored_jobs:
-        logger.warning("No jobs passed the relevance threshold — skipping email.")
+        logger.warning("No jobs passed relevance threshold — skipping email.")
         return
+
+    # Immediate alert for high-scoring jobs
+    if os.getenv("ENABLE_ALERTS", "true").lower() == "true":
+        threshold = int(os.getenv("ALERT_SCORE_THRESHOLD", "9"))
+        alert_jobs = [j for j in scored_jobs if (j.get("score") or 0) >= threshold]
+        if alert_jobs:
+            try:
+                send_alerts(alert_jobs)
+            except Exception as exc:
+                logger.error("Alert sending failed: %s", exc)
 
     try:
         send_digest(scored_jobs)
+        db.mark_emailed([j["db_id"] for j in scored_jobs if j.get("db_id")])
     except Exception as exc:
         logger.error("Email sending failed: %s", exc)
         return
@@ -85,45 +88,34 @@ def run_pipeline() -> None:
     logger.info("=== Pipeline complete: %d jobs sent ===", len(scored_jobs))
 
 
-# ── Minimal health-check server (K8s liveness / readiness probe) ────────────
-
-class _HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"OK")
-
-    def log_message(self, *_):
-        pass  # Suppress per-request HTTP logs
-
-
-def _start_health_server() -> None:
-    port = int(os.getenv("HEALTH_PORT", "5000"))
-    try:
-        server = HTTPServer(("0.0.0.0", port), _HealthHandler)
-    except OSError:
-        logger.warning("Port %d already in use — health server skipped.", port)
-        return
-    t = threading.Thread(target=server.serve_forever, daemon=True)
-    t.start()
-    logger.info("Health endpoint listening on port %d", port)
-
-
-# ── Entry point ──────────────────────────────────────────────────────────────
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--run-now",
         action="store_true",
-        help="Run the pipeline once immediately and exit (useful for testing)",
+        help="Run the pipeline once immediately and exit",
     )
     args = parser.parse_args()
 
-    _start_health_server()
+    init_db()
+
+    _default_resume = os.path.join(os.path.dirname(__file__), "myresume")
+    resume_path = os.getenv("RESUME_PATH", _default_resume)
+    resume_text = ""
+
+    if os.path.exists(resume_path):
+        try:
+            resume_text = parse_resume(resume_path)
+            logger.info("Resume loaded: %d characters", len(resume_text))
+        except Exception as exc:
+            logger.error("Failed to parse resume at '%s': %s", resume_path, exc)
+    else:
+        logger.error("Resume not found at '%s'. Check RESUME_PATH.", resume_path)
+
+    start_web_server(resume_text)
 
     if args.run_now:
-        run_pipeline()
+        run_pipeline(resume_text)
         return
 
     hour = int(os.getenv("SCHEDULE_HOUR", "18"))
@@ -131,14 +123,13 @@ def main() -> None:
 
     scheduler = BlockingScheduler(timezone="UTC")
     scheduler.add_job(
-        run_pipeline,
+        lambda: run_pipeline(resume_text),
         trigger=CronTrigger(hour=hour, minute=minute),
         name="daily_job_search",
         misfire_grace_time=3600,
     )
 
-    next_run = scheduler.get_jobs()[0].next_run_time
-    logger.info("Scheduler started — next run at %s UTC (every day at %02d:%02d)", next_run, hour, minute)
+    logger.info("Scheduler started — daily at %02d:%02d UTC", hour, minute)
 
     try:
         scheduler.start()

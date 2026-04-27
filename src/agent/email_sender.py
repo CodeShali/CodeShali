@@ -36,6 +36,7 @@ def send_digest(jobs: list[dict]) -> None:
 def _build_html(jobs: list[dict]) -> str:
     today = date.today().strftime("%B %d, %Y")
     cards = "".join(_job_card(j) for j in jobs)
+    dashboard_url = os.getenv("DASHBOARD_URL", "http://localhost:5000")
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -58,10 +59,13 @@ def _build_html(jobs: list[dict]) -> str:
   .salary {{ display: inline-block; padding: 3px 10px; border-radius: 20px;
              font-size: 12px; background: #f0f0f0; color: #555; }}
   .reason {{ font-size: 13px; color: #555; margin: 10px 0 14px;
-             border-left: 3px solid #e0e0e0; padding-left: 10px; }}
-  .apply-btn {{ display: inline-block; background: #1a7f37; color: #fff;
-                text-decoration: none; padding: 9px 20px; border-radius: 6px;
-                font-size: 14px; font-weight: 600; }}
+             border-left: 3px solid #e0e0e0; padding-left: 10px; font-style: italic; }}
+  .actions {{ display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }}
+  .btn {{ display: inline-block; text-decoration: none; padding: 9px 18px;
+          border-radius: 6px; font-size: 14px; font-weight: 600; }}
+  .btn-green {{ background: #1a7f37; color: #fff; }}
+  .btn-blue  {{ background: #2d7dd2; color: #fff; }}
+  .btn-gray  {{ background: #f0f0f0; color: #666; border: 1px solid #ddd; }}
   .footer {{ text-align: center; font-size: 12px; color: #aaa;
              padding: 20px; border-top: 1px solid #e8e8e8; margin-top: 8px; }}
 </style>
@@ -73,7 +77,10 @@ def _build_html(jobs: list[dict]) -> str:
     <p>{today} &nbsp;·&nbsp; {len(jobs)} relevant opening{"s" if len(jobs) != 1 else ""} found</p>
   </div>
   {cards}
-  <div class="footer">Powered by AI Job Search Agent &nbsp;·&nbsp; Unsubscribe by stopping the container</div>
+  <div class="footer">
+    Powered by CodeShali &nbsp;·&nbsp;
+    <a href="{dashboard_url}" style="color:#2d7dd2;">Open Dashboard</a>
+  </div>
 </div>
 </body>
 </html>"""
@@ -90,6 +97,18 @@ def _job_card(job: dict) -> str:
     date_posted = job.get("date_posted", "")
     meta_parts = [p for p in [job.get("company", ""), job.get("location", ""), site, date_posted] if p]
 
+    dashboard_url = os.getenv("DASHBOARD_URL", "http://localhost:5000")
+    job_id = job.get("db_id", "")
+    interested_url = f"{dashboard_url}/feedback?id={job_id}&action=interested" if job_id else ""
+    skip_url = f"{dashboard_url}/feedback?id={job_id}&action=skipped" if job_id else ""
+
+    feedback_btns = ""
+    if interested_url:
+        feedback_btns = (
+            f'<a class="btn btn-blue" href="{interested_url}">★ Interested</a>'
+            f'<a class="btn btn-gray" href="{skip_url}">Skip</a>'
+        )
+
     return f"""
 <div class="card">
   <p class="card-title">{_esc(job.get("title",""))}</p>
@@ -97,8 +116,10 @@ def _job_card(job: dict) -> str:
   <span class="badge" style="background:{color}">Match {score}/10</span>
   {salary_html}
   {reason_html}
-  <br>
-  <a class="apply-btn" href="{job.get("link","#")}" target="_blank">View &amp; Apply →</a>
+  <div class="actions">
+    <a class="btn btn-green" href="{job.get('link','#')}" target="_blank">View &amp; Apply →</a>
+    {feedback_btns}
+  </div>
 </div>"""
 
 

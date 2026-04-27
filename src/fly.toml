@@ -1,12 +1,19 @@
-app = "job-search-agent"
+app = "codeshali"
 primary_region = "ord"
 
 [build]
   dockerfile = "Dockerfile"
 
+[env]
+  DB_PATH = "/data/codeshali.db"
+
+[mounts]
+  source      = "job_data"
+  destination = "/data"
+
 [http_service]
-  internal_port = 5000
-  force_https    = false
+  internal_port       = 5000
+  force_https         = false
   auto_stop_machines  = false
   auto_start_machines = true
   min_machines_running = 1

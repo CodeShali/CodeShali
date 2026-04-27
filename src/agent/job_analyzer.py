@@ -1,19 +1,9 @@
-import json
 import logging
 import os
 
-from openai import OpenAI
+from agent.ai_client import chat_json
 
 logger = logging.getLogger(__name__)
-_client: OpenAI | None = None
-
-
-def _get_client() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    return _client
-
 
 SYSTEM_PROMPT = """You are a career expert. Given a resume, extract the candidate's job search profile.
 
@@ -29,20 +19,9 @@ Return ONLY valid JSON with this exact structure:
 
 
 def analyze_resume(resume_text: str) -> dict:
-    client = _get_client()
     location_override = os.getenv("JOB_LOCATION", "")
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": resume_text},
-        ],
-        temperature=0.2,
-    )
-
-    profile = json.loads(response.choices[0].message.content)
+    profile = chat_json(SYSTEM_PROMPT, resume_text)
 
     if location_override:
         profile["location"] = location_override

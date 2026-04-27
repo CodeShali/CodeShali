@@ -4,6 +4,8 @@ import os
 import pandas as pd
 from jobspy import scrape_jobs
 
+from agent import database as db
+
 logger = logging.getLogger(__name__)
 
 SITES = ["indeed", "linkedin", "glassdoor", "google", "zip_recruiter"]
@@ -29,11 +31,11 @@ def search_all_boards(profile: dict) -> list[dict]:
                 country_indeed="USA",
             )
             _collect(df, all_jobs, seen_urls)
-            logger.info("  → %d unique jobs collected so far", len(all_jobs))
+            logger.info("  → %d new jobs collected so far", len(all_jobs))
         except Exception as exc:
             logger.warning("Board search failed for '%s': %s", title, exc)
 
-    logger.info("Total unique jobs found: %d", len(all_jobs))
+    logger.info("Total new jobs this run: %d", len(all_jobs))
     return all_jobs
 
 
@@ -42,19 +44,23 @@ def _collect(df: pd.DataFrame, jobs: list[dict], seen: set[str]) -> None:
         url = str(row.get("job_url") or "").strip()
         if not url or url in seen:
             continue
+        if db.is_seen(url):
+            continue
         seen.add(url)
-        jobs.append(
-            {
-                "title": str(row.get("title") or ""),
-                "company": str(row.get("company") or ""),
-                "location": str(row.get("location") or ""),
-                "salary": _format_salary(row),
-                "link": url,
-                "description": str(row.get("description") or "")[:1500],
-                "site": str(row.get("site") or ""),
-                "date_posted": str(row.get("date_posted") or ""),
-            }
-        )
+
+        job = {
+            "title":       str(row.get("title") or ""),
+            "company":     str(row.get("company") or ""),
+            "location":    str(row.get("location") or ""),
+            "salary":      _format_salary(row),
+            "url":         url,
+            "link":        url,
+            "description": str(row.get("description") or "")[:1500],
+            "site":        str(row.get("site") or ""),
+            "date_posted": str(row.get("date_posted") or ""),
+        }
+        job["db_id"] = db.upsert_job(job)
+        jobs.append(job)
 
 
 def _format_salary(row: pd.Series) -> str:
