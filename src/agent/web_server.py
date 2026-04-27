@@ -3,14 +3,16 @@
 import logging
 import os
 import threading
+from functools import wraps
 
-from flask import Flask, redirect, render_template_string, request
+from flask import Flask, redirect, render_template_string, request, session
 
 from agent import database as db
 
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", os.urandom(24).hex())
 _resume_text: str = ""
 
 _gen_lock = threading.Lock()
@@ -77,7 +79,10 @@ _DASH = """<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <h1>CodeShali — Job Dashboard</h1>
+  <div style="display:flex;align-items:center;gap:16px">
+    <h1 style="margin:0">CodeShali — Job Dashboard</h1>
+    <a href="/logout" style="font-size:12px;color:#aaa;text-decoration:none">Logout</a>
+  </div>
   <div class="stats">
     <div class="stat"><div class="stat-n">{{ stats.today }}</div><div class="stat-l">Today</div></div>
     <div class="stat"><div class="stat-n">{{ stats.total }}</div><div class="stat-l">Total</div></div>
@@ -220,6 +225,62 @@ _CL = """<!DOCTYPE html>
 </html>"""
 
 
+# ── Login template ───────────────────────────────────────────────────────────
+
+_LOGIN = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CodeShali — Login</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       background:#f0f2f5;margin:0;display:flex;align-items:center;
+       justify-content:center;min-height:100vh;color:#333}
+  .card{background:#fff;border:1px solid #e0e0e0;border-radius:12px;
+        padding:40px 36px;width:100%;max-width:380px}
+  h1{margin:0 0 28px;font-size:22px;font-weight:700;color:#1a1a2e;text-align:center}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#555}
+  input[type=password]{width:100%;padding:10px 14px;border:1px solid #ddd;
+    border-radius:6px;font-size:15px;outline:none;transition:border .15s}
+  input[type=password]:focus{border-color:#1a7f37}
+  button{width:100%;margin-top:20px;padding:11px;background:#1a1a2e;color:#fff;
+    border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+  button:hover{background:#2a2a4e}
+  .err{background:#fdecea;border:1px solid #f5c6cb;border-radius:6px;
+       padding:10px 14px;font-size:13px;color:#c62828;margin-bottom:18px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>CodeShali</h1>
+  {% if error %}<div class="err">{{ error | e }}</div>{% endif %}
+  <form method="post" action="/login">
+    <label for="pw">Password</label>
+    <input type="password" id="pw" name="password" autofocus autocomplete="current-password">
+    <button type="submit">Sign in</button>
+  </form>
+</div>
+</body>
+</html>"""
+
+
+# ── Auth helpers ──────────────────────────────────────────────────────────────
+
+def _auth_enabled() -> bool:
+    return bool(os.getenv("DASHBOARD_PASSWORD"))
+
+
+def _login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if _auth_enabled() and not session.get("authenticated"):
+            return redirect("/login")
+        return f(*args, **kwargs)
+    return decorated
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.route("/health")
@@ -227,7 +288,27 @@ def health():
     return "OK", 200
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if not _auth_enabled():
+        return redirect("/")
+    error = None
+    if request.method == "POST":
+        if request.form.get("password") == os.getenv("DASHBOARD_PASSWORD"):
+            session["authenticated"] = True
+            return redirect("/")
+        error = "Incorrect password."
+    return render_template_string(_LOGIN, error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+
 @app.route("/")
+@_login_required
 def dashboard():
     f = request.args.get("filter", "all")
     msg = request.args.get("msg", "")
@@ -237,6 +318,7 @@ def dashboard():
 
 
 @app.route("/feedback")
+@_login_required
 def feedback():
     job_id = request.args.get("id", type=int)
     action = request.args.get("action", "")
@@ -260,6 +342,7 @@ def feedback():
 
 @app.route("/cover-letter/<int:job_id>")
 @app.route("/cover-letter/<int:job_id>/generate")
+@_login_required
 def cover_letter(job_id: int):
     job = db.get_job(job_id)
     if not job:
@@ -281,6 +364,7 @@ def cover_letter(job_id: int):
 
 
 @app.route("/cover-letter/<int:job_id>/regenerate")
+@_login_required
 def regenerate_cover_letter(job_id: int):
     if not db.get_job(job_id):
         return "Job not found", 404

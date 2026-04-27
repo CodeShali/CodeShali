@@ -1,0 +1,15 @@
+services:
+  codeshali:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - codeshali_data:/data
+    env_file:
+      - src/.env
+    restart: unless-stopped
+
+volumes:
+  codeshali_data:

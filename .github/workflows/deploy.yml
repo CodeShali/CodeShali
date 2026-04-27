@@ -1,22 +1,20 @@
-name: Deploy to Fly.io
+name: Deploy to Raspberry Pi
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "src/**"
+    branches: [main, master]
 
 jobs:
   deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Deploy
-        run: flyctl deploy --remote-only
-        working-directory: src
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Build and deploy
+        run: |
+          IMAGE="${{ github.event.repository.name }}"
+          sudo docker compose up -d --build
+          echo "Deployed $IMAGE"
+          sudo docker ps --filter "name=$IMAGE" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
