@@ -69,3 +69,35 @@
   .scrollbar-hide::-webkit-scrollbar { display: none; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+@media print {
+  /* Hide non-essential UI for PDF/print export */
+  nav, aside, .chat-widget-root, button:not(.print-visible),
+  [class*="fixed"], [class*="sticky"] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-page {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .rounded-xl, .rounded-2xl {
+    border: 1px solid #e2e8f0 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  [class*="text-text-"] {
+    color: #1e293b !important;
+  }
+
+  [class*="bg-\["] {
+    background: white !important;
+  }
+}

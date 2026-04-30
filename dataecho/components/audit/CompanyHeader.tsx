@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Building2, MapPin, Users, Briefcase } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { getRiskColor } from '@/lib/utils'
 
 interface CompanyHeaderProps {
   companyName: string
@@ -23,31 +22,45 @@ export function CompanyHeader({
   size,
   riskLevel,
 }: CompanyHeaderProps) {
-  const [imgError, setImgError] = useState(false)
+  const [imgState, setImgState] = useState<'loading' | 'loaded' | 'error'>(
+    companyDomain ? 'loading' : 'error'
+  )
 
   const riskVariant = riskLevel.toLowerCase() as 'low' | 'medium' | 'high' | 'critical'
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
       {/* Company logo */}
-      {companyDomain && !imgError ? (
-        <div className="h-16 w-16 rounded-2xl overflow-hidden border border-[#1e293b] bg-white flex items-center justify-center flex-shrink-0">
-          <Image
-            src={`https://logo.clearbit.com/${companyDomain}`}
-            alt={companyName}
-            width={64}
-            height={64}
-            className="object-contain"
-            onError={() => setImgError(true)}
-          />
-        </div>
-      ) : (
-        <div className="h-16 w-16 rounded-2xl flex items-center justify-center bg-[#111827] border border-[#1e293b] flex-shrink-0">
-          <span className="font-display text-3xl font-bold text-text-secondary">
-            {companyName.charAt(0).toUpperCase()}
-          </span>
-        </div>
-      )}
+      <div className="relative h-16 w-16 flex-shrink-0">
+        {/* Skeleton shown while loading */}
+        {imgState === 'loading' && (
+          <div className="absolute inset-0 rounded-2xl skeleton" />
+        )}
+
+        {/* Letter fallback shown on error */}
+        {imgState === 'error' && (
+          <div className="h-16 w-16 rounded-2xl flex items-center justify-center bg-[#111827] border border-[#1e293b]">
+            <span className="font-display text-3xl font-bold text-text-secondary">
+              {companyName.charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
+
+        {/* Clearbit logo */}
+        {companyDomain && imgState !== 'error' && (
+          <div className={`h-16 w-16 rounded-2xl overflow-hidden border border-[#1e293b] bg-white flex items-center justify-center ${imgState === 'loading' ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}>
+            <Image
+              src={`https://logo.clearbit.com/${companyDomain}`}
+              alt={companyName}
+              width={64}
+              height={64}
+              className="object-contain"
+              onLoad={() => setImgState('loaded')}
+              onError={() => setImgState('error')}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">

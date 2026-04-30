@@ -16,28 +16,35 @@ interface AuditSummary {
 }
 
 function CompanyLogo({ domain, name }: { domain: string | null; name: string }) {
-  const [imgError, setImgError] = useState(false)
-
-  if (!domain || imgError) {
-    return (
-      <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-[#111827] border border-[#1e293b] flex-shrink-0">
-        <span className="font-display text-lg font-bold text-text-secondary">
-          {name.charAt(0).toUpperCase()}
-        </span>
-      </div>
-    )
-  }
+  const [imgState, setImgState] = useState<'loading' | 'loaded' | 'error'>(
+    domain ? 'loading' : 'error'
+  )
 
   return (
-    <div className="h-10 w-10 rounded-xl overflow-hidden border border-[#1e293b] flex-shrink-0 bg-white flex items-center justify-center">
-      <Image
-        src={`https://logo.clearbit.com/${domain}`}
-        alt={name}
-        width={40}
-        height={40}
-        className="object-contain"
-        onError={() => setImgError(true)}
-      />
+    <div className="relative h-10 w-10 flex-shrink-0">
+      {imgState === 'loading' && (
+        <div className="absolute inset-0 rounded-xl skeleton" />
+      )}
+      {imgState === 'error' && (
+        <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-[#111827] border border-[#1e293b]">
+          <span className="font-display text-lg font-bold text-text-secondary">
+            {name.charAt(0).toUpperCase()}
+          </span>
+        </div>
+      )}
+      {domain && imgState !== 'error' && (
+        <div className={`h-10 w-10 rounded-xl overflow-hidden border border-[#1e293b] bg-white flex items-center justify-center ${imgState === 'loading' ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}>
+          <Image
+            src={`https://logo.clearbit.com/${domain}`}
+            alt={name}
+            width={40}
+            height={40}
+            className="object-contain"
+            onLoad={() => setImgState('loaded')}
+            onError={() => setImgState('error')}
+          />
+        </div>
+      )}
     </div>
   )
 }

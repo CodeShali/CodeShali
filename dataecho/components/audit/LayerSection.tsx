@@ -124,18 +124,23 @@ export function LayerSection({ data, plan, onPaywall }: LayerSectionProps) {
               </p>
             )}
             {(data.llmKnowledge.categories || []).map((cat, i) => (
-              <DataCard
+              <div
                 key={i}
-                label={cat.label}
-                summary={cat.summary}
-                detail={cat.detail}
-                items={cat.items}
-                plan={plan}
-                expansionCount={getTotalExpansions()}
-                onExpand={() => handleExpand(`llm-${i}`)}
-                onPaywall={onPaywall}
-                accentColor="#38bdf8"
-              />
+                className="animate-fade-in"
+                style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'both' }}
+              >
+                <DataCard
+                  label={cat.label}
+                  summary={cat.summary}
+                  detail={cat.detail}
+                  items={cat.items}
+                  plan={plan}
+                  expansionCount={getTotalExpansions()}
+                  onExpand={() => handleExpand(`llm-${i}`)}
+                  onPaywall={onPaywall}
+                  accentColor="#38bdf8"
+                />
+              </div>
             ))}
             {(!data.llmKnowledge.categories || data.llmKnowledge.categories.length === 0) && (
               <EmptyState message="No LLM knowledge data found for this company." />
@@ -149,21 +154,26 @@ export function LayerSection({ data, plan, onPaywall }: LayerSectionProps) {
               <EmptyState message="No known data breaches found for this company." icon="✅" positive />
             ) : (
               (data.breaches || []).map((breach, i) => (
-                <DataCard
+                <div
                   key={i}
-                  label={breach.title}
-                  summary={breach.summary}
-                  detail={breach.detail}
-                  year={breach.year}
-                  dataExposed={breach.dataExposed}
-                  recordsAffected={breach.recordsAffected}
-                  source={breach.source}
-                  plan={plan}
-                  expansionCount={getTotalExpansions()}
-                  onExpand={() => handleExpand(`breach-${i}`)}
-                  onPaywall={onPaywall}
-                  accentColor="#f87171"
-                />
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'both' }}
+                >
+                  <DataCard
+                    label={breach.title}
+                    summary={breach.summary}
+                    detail={breach.detail}
+                    year={breach.year}
+                    dataExposed={breach.dataExposed}
+                    recordsAffected={breach.recordsAffected}
+                    source={breach.source}
+                    plan={plan}
+                    expansionCount={getTotalExpansions()}
+                    onExpand={() => handleExpand(`breach-${i}`)}
+                    onPaywall={onPaywall}
+                    accentColor="#f87171"
+                  />
+                </div>
               ))
             )}
           </div>
@@ -175,21 +185,26 @@ export function LayerSection({ data, plan, onPaywall }: LayerSectionProps) {
               <EmptyState message="No significant publicly shared data found." icon="✅" positive />
             ) : (
               (data.userSharedData || []).map((item, i) => (
-                <DataCard
+                <div
                   key={i}
-                  label={item.platform}
-                  summary={item.summary}
-                  detail={item.detail}
-                  date={item.date}
-                  platform={item.platform}
-                  sensitivity={item.sensitivity}
-                  url={item.url}
-                  plan={plan}
-                  expansionCount={getTotalExpansions()}
-                  onExpand={() => handleExpand(`shared-${i}`)}
-                  onPaywall={onPaywall}
-                  accentColor="#a78bfa"
-                />
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'both' }}
+                >
+                  <DataCard
+                    label={item.platform}
+                    summary={item.summary}
+                    detail={item.detail}
+                    date={item.date}
+                    platform={item.platform}
+                    sensitivity={item.sensitivity}
+                    url={item.url}
+                    plan={plan}
+                    expansionCount={getTotalExpansions()}
+                    onExpand={() => handleExpand(`shared-${i}`)}
+                    onPaywall={onPaywall}
+                    accentColor="#a78bfa"
+                  />
+                </div>
               ))
             )}
           </div>
