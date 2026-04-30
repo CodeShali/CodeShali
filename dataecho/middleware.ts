@@ -1,6 +1,6 @@
 export { default } from 'next-auth/middleware'
 
 export const config = {
-  // Only protect /dashboard routes — /audit routes are public for shareable links
-  matcher: ['/dashboard/:path*'],
+  // /dashboard requires login; /admin auth checked in the page/API route itself
+  matcher: ['/dashboard/:path*', '/admin/:path*'],
 }

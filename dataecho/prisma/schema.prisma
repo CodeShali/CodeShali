@@ -67,6 +67,11 @@ model Audit {
   size          String?
   riskLevel     String
   result        Json
+  inputTokens   Int?
+  outputTokens  Int?
+  costUsd       Float?
+  modelUsed     String?
+  plan          String?
   createdAt     DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id])
 }

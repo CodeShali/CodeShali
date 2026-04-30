@@ -16,6 +16,7 @@ class AuditRequest(BaseModel):
     hq: Optional[str] = None
     size: Optional[str] = None
     userId: Optional[str] = None
+    plan: Optional[str] = "FREE"
 
 
 class ChatRequest(BaseModel):
@@ -29,13 +30,15 @@ async def create_audit(req: AuditRequest) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="Company name is required")
 
     try:
-        result = run_audit(
+        payload = run_audit(
             company=req.company.strip(),
             industry=req.industry or "",
             hq=req.hq or "",
             size=req.size or "",
+            plan=req.plan or "FREE",
         )
-        return result
+        # payload = {"result": {...}, "usage": {...}}
+        return payload
     except ValueError as e:
         logger.error("JSON parse error for %s: %s", req.company, e)
         raise HTTPException(status_code=422, detail=f"Failed to parse audit result: {e}")

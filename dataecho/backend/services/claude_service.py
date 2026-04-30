@@ -1,9 +1,30 @@
 import json
 import re
 import anthropic
+from dataclasses import dataclass
 from typing import Any
 
 client = anthropic.Anthropic()
+
+# Per-plan configuration: model, token limits, search uses
+@dataclass
+class PlanConfig:
+    model: str
+    max_tokens: int
+    search_uses: int
+
+PLAN_CONFIGS: dict[str, PlanConfig] = {
+    "FREE":       PlanConfig(model="claude-haiku-4-5",  max_tokens=1500, search_uses=2),
+    "PRO":        PlanConfig(model="claude-sonnet-4-6", max_tokens=3000, search_uses=5),
+    "ENTERPRISE": PlanConfig(model="claude-opus-4-7",   max_tokens=6000, search_uses=10),
+}
+
+# Cost per million tokens (input, output) in USD
+MODEL_COSTS: dict[str, tuple[float, float]] = {
+    "claude-haiku-4-5":  (1.00, 5.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-opus-4-7":   (5.00, 25.00),
+}
 
 AUDIT_SYSTEM_PROMPT = """You are an AI Data Transparency Auditor.
 Perform a 3-layer audit and return ONLY raw valid JSON.
@@ -79,7 +100,23 @@ Be helpful, concise, and honest. If information is not in the audit, say so.
 Do not make up information not present in the audit context."""
 
 
-def run_audit(company: str, industry: str = "", hq: str = "", size: str = "") -> dict[str, Any]:
+def _calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+    cost_per_m = MODEL_COSTS.get(model, (5.00, 25.00))
+    return round(
+        (input_tokens / 1_000_000) * cost_per_m[0] +
+        (output_tokens / 1_000_000) * cost_per_m[1],
+        6,
+    )
+
+
+def run_audit(
+    company: str,
+    industry: str = "",
+    hq: str = "",
+    size: str = "",
+    plan: str = "FREE",
+) -> dict[str, Any]:
+    config = PLAN_CONFIGS.get(plan, PLAN_CONFIGS["FREE"])
     prompt = AUDIT_USER_TEMPLATE.format(
         company=company,
         industry=industry or "Unknown",
@@ -88,9 +125,9 @@ def run_audit(company: str, industry: str = "", hq: str = "", size: str = "") ->
     )
 
     response = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=4000,
-        tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}],
+        model=config.model,
+        max_tokens=config.max_tokens,
+        tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": config.search_uses}],
         system=AUDIT_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -104,7 +141,21 @@ def run_audit(company: str, industry: str = "", hq: str = "", size: str = "") ->
     full_text = re.sub(r"\s*```$", "", full_text)
     full_text = full_text.strip()
 
-    return json.loads(full_text)
+    audit_data = json.loads(full_text)
+
+    input_tokens = response.usage.input_tokens
+    output_tokens = response.usage.output_tokens
+    cost_usd = _calculate_cost(config.model, input_tokens, output_tokens)
+
+    return {
+        "result": audit_data,
+        "usage": {
+            "inputTokens": input_tokens,
+            "outputTokens": output_tokens,
+            "costUsd": cost_usd,
+            "model": config.model,
+        },
+    }
 
 
 def run_chat(message: str, context: dict[str, Any]) -> str:
@@ -112,8 +163,8 @@ def run_chat(message: str, context: dict[str, Any]) -> str:
     audit_context = json.dumps(context, indent=2)
 
     response = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=1000,
+        model="claude-haiku-4-5",
+        max_tokens=800,
         system=CHAT_SYSTEM_TEMPLATE.format(company=company, audit_context=audit_context),
         messages=[{"role": "user", "content": message}],
     )

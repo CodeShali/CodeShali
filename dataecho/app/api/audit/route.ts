@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Company name required' }, { status: 400 })
   }
 
-  const usageCheck = await checkAndIncrementUsage(session.user.id, session.user.plan)
+  const plan = session.user.plan || 'FREE'
+
+  const usageCheck = await checkAndIncrementUsage(session.user.id, plan)
   if (!usageCheck.allowed) {
     return NextResponse.json(
       { error: 'DAILY_LIMIT_REACHED', limit: usageCheck.limit, current: usageCheck.current },
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
     const backendRes = await fetch(`${backendUrl}/audit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company, industry, hq, size, userId: session.user.id }),
+      body: JSON.stringify({ company, industry, hq, size, userId: session.user.id, plan }),
     })
 
     if (!backendRes.ok) {
@@ -60,7 +62,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const auditResult = await backendRes.json()
+    const payload = await backendRes.json()
+    // payload = { result: {...}, usage: { inputTokens, outputTokens, costUsd, model } }
+    const auditResult = payload.result ?? payload
+    const usage = payload.usage ?? {}
 
     const audit = await prisma.audit.create({
       data: {
@@ -72,6 +77,11 @@ export async function POST(req: NextRequest) {
         size: size || null,
         riskLevel: auditResult.riskLevel || 'Unknown',
         result: auditResult,
+        inputTokens: usage.inputTokens ?? null,
+        outputTokens: usage.outputTokens ?? null,
+        costUsd: usage.costUsd ?? null,
+        modelUsed: usage.model ?? null,
+        plan,
       },
     })
 
