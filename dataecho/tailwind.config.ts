@@ -96,6 +96,31 @@ const config: Config = {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+        'scan-line': {
+          '0%': { top: '0%', opacity: '1' },
+          '90%': { opacity: '1' },
+          '100%': { top: '100%', opacity: '0' },
+        },
+        'slide-up': {
+          from: { opacity: '0', transform: 'translateY(24px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        marquee: {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        'glow-breathe': {
+          '0%, 100%': { opacity: '0.4' },
+          '50%': { opacity: '0.8' },
+        },
+        blink: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -104,6 +129,12 @@ const config: Config = {
         'count-up': 'count-up 0.5s ease-out',
         'fade-in': 'fade-in 0.4s ease-out',
         shimmer: 'shimmer 2s linear infinite',
+        float: 'float 4s ease-in-out infinite',
+        'scan-line': 'scan-line 2.5s ease-in-out infinite',
+        'slide-up': 'slide-up 0.6s ease-out',
+        marquee: 'marquee 28s linear infinite',
+        'glow-breathe': 'glow-breathe 3s ease-in-out infinite',
+        blink: 'blink 1s step-end infinite',
       },
     },
   },
