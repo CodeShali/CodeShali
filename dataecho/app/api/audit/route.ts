@@ -31,12 +31,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { company, industry, hq, size } = await req.json()
+  const { company, industry, hq, size, companyDomain } = await req.json()
   if (!company) {
     return NextResponse.json({ error: 'Company name required' }, { status: 400 })
   }
 
   const plan = session.user.plan || 'FREE'
+  const ENGINE_TIER: Record<string, string> = { FREE: 'Standard', PRO: 'Advanced', ENTERPRISE: 'Premium' }
+  const engineTier = ENGINE_TIER[plan] || 'Standard'
 
   const usageCheck = await checkAndIncrementUsage(session.user.id, plan)
   if (!usageCheck.allowed) {
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
     const backendRes = await fetch(`${backendUrl}/audit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company, industry, hq, size, userId: session.user.id, plan }),
+      body: JSON.stringify({ company, domain: companyDomain || '', industry, hq, size, userId: session.user.id, plan }),
     })
 
     if (!backendRes.ok) {
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ auditId: audit.id, ...auditResult })
+    return NextResponse.json({ auditId: audit.id, engineTier, ...auditResult })
   } catch (err) {
     console.error('Audit error:', err)
     return NextResponse.json({ error: 'Failed to run audit' }, { status: 500 })

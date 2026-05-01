@@ -12,6 +12,7 @@ interface CompanyHeaderProps {
   hq?: string | null
   size?: string | null
   riskLevel: string
+  engineTier?: string
 }
 
 export function CompanyHeader({
@@ -21,6 +22,7 @@ export function CompanyHeader({
   hq,
   size,
   riskLevel,
+  engineTier,
 }: CompanyHeaderProps) {
   const [imgState, setImgState] = useState<'loading' | 'loaded' | 'error'>(
     companyDomain ? 'loading' : 'error'
@@ -96,6 +98,11 @@ export function CompanyHeader({
             <span className="flex items-center gap-1.5 font-mono text-xs text-text-muted">
               <Building2 className="h-3.5 w-3.5" />
               {companyDomain}
+            </span>
+          )}
+          {engineTier && (
+            <span className="text-[11px] font-mono text-text-muted opacity-60">
+              {engineTier} Engine
             </span>
           )}
         </div>

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { ChevronDown, Lock, ExternalLink } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, Lock, ExternalLink, CheckCircle2 } from 'lucide-react'
 import { cn, getSensitivityColor } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
@@ -19,6 +19,7 @@ interface DataCardProps {
   url?: string
   dataExposed?: string[]
   recordsAffected?: string
+  verified?: boolean
   plan: string
   expansionCount: number
   onExpand: () => void
@@ -48,6 +49,7 @@ export function DataCard({
   url,
   dataExposed,
   recordsAffected,
+  verified,
   plan,
   expansionCount,
   onExpand,
@@ -111,6 +113,13 @@ export function DataCard({
 
             {recordsAffected && (
               <span className="text-[10px] font-mono text-red-400">{recordsAffected} records</span>
+            )}
+
+            {verified && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-green-400/10 border border-green-400/20 text-green-400">
+                <CheckCircle2 className="h-2.5 w-2.5" />
+                VERIFIED
+              </span>
             )}
           </div>
 

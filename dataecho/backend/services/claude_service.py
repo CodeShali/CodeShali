@@ -1,12 +1,22 @@
+import asyncio
 import json
 import re
-import anthropic
-from dataclasses import dataclass
 from typing import Any
 
-client = anthropic.Anthropic()
+from anthropic import AsyncAnthropic
+
+from services.intel_service import (
+    fetch_hibp_breaches,
+    fetch_crt_subdomains,
+    fetch_github_leaks,
+    fetch_shodan_exposure,
+)
+
+client = AsyncAnthropic()
 
 # Per-plan configuration: model, token limits, search uses
+from dataclasses import dataclass
+
 @dataclass
 class PlanConfig:
     model: str
@@ -29,23 +39,26 @@ MODEL_COSTS: dict[str, tuple[float, float]] = {
 AUDIT_SYSTEM_PROMPT = """You are an AI Data Transparency Auditor.
 Perform a 3-layer audit and return ONLY raw valid JSON.
 No markdown, no code fences, no preamble, no explanation.
-Your entire response must be a single valid JSON object."""
+Your entire response must be a single valid JSON object.
+When VERIFIED EXTERNAL DATA is provided, you MUST incorporate it accurately — do not contradict verified breach records or infrastructure data."""
 
 AUDIT_USER_TEMPLATE = """Audit company: {company}
 Industry: {industry}, HQ: {hq}, Size: {size}
+
+{verified_block}
 
 LAYER 1 - YOUR LLM TRAINING KNOWLEDGE:
 What specific facts, people, events, products, controversies do you know about {company}?
 Be honest and precise. Categorize by: Leadership, Products, Financials, Legal, News, Partnerships, Public Reputation.
 
 LAYER 2 - BREACH DATABASES:
-Search for known data breaches, hacks, or security incidents involving {company}.
+Search for additional context on breaches. The VERIFIED EXTERNAL DATA above already contains confirmed HIBP breach records — reference them in your analysis.
 
 LAYER 3 - USER-SHARED DATA:
 Search for recent instances of:
 - Employees sharing internal info on Reddit, LinkedIn, forums
 - Internal documents, salary data, org charts appearing publicly
-- GitHub repos leaking company data
+- GitHub repos leaking company data (verified GitHub leaks provided above)
 - News about employee leaks or accidental disclosures
 - Any public AI conversations containing sensitive company data
 
@@ -109,22 +122,81 @@ def _calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
     )
 
 
-def run_audit(
+def _build_verified_block(
+    hibp: list,
+    subdomains: list,
+    github: list,
+    shodan: dict,
+) -> str:
+    if not any([hibp, subdomains, github, shodan]):
+        return ""
+
+    lines = ["=== VERIFIED EXTERNAL DATA (from real APIs — treat as authoritative) ==="]
+
+    if hibp:
+        lines.append(f"\nHIBP CONFIRMED BREACHES ({len(hibp)}):")
+        for b in hibp:
+            lines.append(
+                f"  - {b['title']} ({b['date']}): {b['recordCount']:,} records"
+                f" — exposed: {', '.join(b['dataClasses'][:4])}"
+            )
+    else:
+        lines.append("\nHIBP CONFIRMED BREACHES: None found in database")
+
+    if subdomains:
+        lines.append(f"\nEXPOSED SUBDOMAINS via crt.sh ({len(subdomains)} found):")
+        lines.append("  " + ", ".join(subdomains[:20]))
+        if len(subdomains) > 20:
+            lines.append(f"  ... and {len(subdomains) - 20} more")
+
+    if github:
+        lines.append(f"\nGITHUB CODE LEAKS ({len(github)} public repos found):")
+        for g in github[:5]:
+            lines.append(f"  - {g['repo']}: {g['file']}")
+
+    if shodan:
+        ports = shodan.get("openPorts", [])
+        vulns = shodan.get("knownVulns", [])
+        if ports or vulns:
+            lines.append(f"\nSHODAN INFRASTRUCTURE ({shodan.get('ip', 'unknown IP')}):")
+            if ports:
+                lines.append(f"  Open ports: {', '.join(str(p) for p in ports[:15])}")
+            if vulns:
+                lines.append(f"  Known CVEs: {', '.join(vulns[:10])}")
+
+    lines.append("=== END VERIFIED DATA ===\n")
+    return "\n".join(lines)
+
+
+async def run_audit(
     company: str,
+    domain: str = "",
     industry: str = "",
     hq: str = "",
     size: str = "",
     plan: str = "FREE",
 ) -> dict[str, Any]:
     config = PLAN_CONFIGS.get(plan, PLAN_CONFIGS["FREE"])
+
+    # Fetch all intel sources in parallel — failures are caught inside each function
+    hibp, subdomains, github, shodan = await asyncio.gather(
+        fetch_hibp_breaches(domain),
+        fetch_crt_subdomains(domain),
+        fetch_github_leaks(company, domain),
+        fetch_shodan_exposure(domain),
+    )
+
+    verified_block = _build_verified_block(hibp, subdomains, github, shodan)
+
     prompt = AUDIT_USER_TEMPLATE.format(
         company=company,
         industry=industry or "Unknown",
         hq=hq or "Unknown",
         size=size or "Unknown",
+        verified_block=verified_block,
     )
 
-    response = client.messages.create(
+    response = await client.messages.create(
         model=config.model,
         max_tokens=config.max_tokens,
         tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": config.search_uses}],
@@ -143,6 +215,12 @@ def run_audit(
 
     audit_data = json.loads(full_text)
 
+    # Attach raw verified intel directly to result (not LLM-generated, authoritative)
+    audit_data["verifiedBreaches"] = hibp
+    audit_data["exposedSubdomains"] = subdomains
+    audit_data["githubLeaks"] = github
+    audit_data["infraExposure"] = shodan if shodan else {}
+
     input_tokens = response.usage.input_tokens
     output_tokens = response.usage.output_tokens
     cost_usd = _calculate_cost(config.model, input_tokens, output_tokens)
@@ -158,11 +236,11 @@ def run_audit(
     }
 
 
-def run_chat(message: str, context: dict[str, Any]) -> str:
+async def run_chat(message: str, context: dict[str, Any]) -> str:
     company = context.get("companyName", "the company")
     audit_context = json.dumps(context, indent=2)
 
-    response = client.messages.create(
+    response = await client.messages.create(
         model="claude-haiku-4-5",
         max_tokens=800,
         system=CHAT_SYSTEM_TEMPLATE.format(company=company, audit_context=audit_context),

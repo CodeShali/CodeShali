@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui/use-toast'
 
 interface AuditResult {
   auditId?: string
+  engineTier?: string
   companyDomain?: string
   riskLevel: string
   riskScore: number
@@ -39,6 +40,15 @@ interface AuditResult {
     recordsAffected: string
     source: string
   }>
+  verifiedBreaches?: Array<{
+    name: string
+    title: string
+    date: string
+    recordCount: number
+    dataClasses: string[]
+    isVerified: boolean
+    description: string
+  }>
   userSharedData?: Array<{
     platform: string
     date: string
@@ -47,6 +57,15 @@ interface AuditResult {
     sensitivity: string
     url: string
   }>
+  githubLeaks?: Array<{ repo: string; file: string; url: string; repoUrl: string }>
+  exposedSubdomains?: string[]
+  infraExposure?: {
+    ip?: string
+    openPorts?: number[]
+    knownVulns?: string[]
+    services?: string[]
+    hostnames?: string[]
+  }
   publicDataSources?: string[]
 }
 
@@ -98,7 +117,13 @@ export default function AuditPage() {
       const res = await fetch('/api/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ company: companyName, industry, hq, size }),
+        body: JSON.stringify({
+          company: companyName,
+          industry,
+          hq,
+          size,
+          companyDomain: auditData?.companyDomain || null,
+        }),
       })
 
       const data = await res.json()
@@ -268,6 +293,7 @@ export default function AuditPage() {
             hq={hq}
             size={size}
             riskLevel={auditData.riskLevel}
+            engineTier={auditData.engineTier}
           />
         </div>
 
