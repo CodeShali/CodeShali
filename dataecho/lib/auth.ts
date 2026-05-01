@@ -27,7 +27,7 @@ export const authOptions: NextAuthOptions = {
           select: { plan: true, stripeCustomerId: true },
         })
         token.plan = dbUser?.plan ?? 'FREE'
-        token.stripeCustomerId = dbUser?.stripeCustomerId
+        token.stripeCustomerId = dbUser?.stripeCustomerId ?? undefined
       }
       return token
     },

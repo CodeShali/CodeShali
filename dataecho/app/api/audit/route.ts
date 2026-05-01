@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
       where: { userId: session.user.id, companyName: { contains: company, mode: 'insensitive' } },
       orderBy: { createdAt: 'desc' },
     })
-    return NextResponse.json(audit ? { ...audit.result, auditId: audit.id } : null)
+    return NextResponse.json(audit ? { ...(audit.result as Record<string, unknown>), auditId: audit.id } : null)
   }
 
   const audits = await prisma.audit.findMany({

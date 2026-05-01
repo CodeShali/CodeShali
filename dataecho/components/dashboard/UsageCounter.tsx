@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Zap, Infinity } from 'lucide-react'
+import { Zap, Infinity as InfinityIcon } from 'lucide-react'
 import Link from 'next/link'
 
 interface UsageData {
@@ -27,10 +27,10 @@ export function UsageCounter() {
     )
   }
 
-  if (usage.limit === Infinity || usage.plan !== 'FREE') {
+  if (!Number.isFinite(usage.limit) || usage.plan !== 'FREE') {
     return (
       <div className="flex items-center gap-1.5 rounded-full border border-accent-amber/20 bg-accent-amber/5 px-4 py-1.5 text-sm font-mono">
-        <Infinity className="h-3.5 w-3.5 text-accent-amber" />
+        <InfinityIcon className="h-3.5 w-3.5 text-accent-amber" />
         <span className="text-accent-amber font-medium capitalize">{usage.plan.toLowerCase()}</span>
         <span className="text-text-muted">— unlimited audits</span>
       </div>

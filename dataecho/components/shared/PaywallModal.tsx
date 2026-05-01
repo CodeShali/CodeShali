@@ -22,7 +22,6 @@ export function PaywallModal({ defaultOpen = false, trigger, onClose }: PaywallM
   }
   const [interval, setInterval] = useState<BillingInterval>('monthly')
   const [loading, setLoading] = useState<string | null>(null)
-  const router = useRouter()
 
   const handleCheckout = async (planKey: string, priceId: string) => {
     setLoading(planKey)
