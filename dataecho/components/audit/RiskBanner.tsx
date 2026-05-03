@@ -39,10 +39,17 @@ const riskIcons = {
 }
 
 const riskBg = {
-  low: 'from-green-400/10 to-transparent border-green-400/20',
-  medium: 'from-amber-400/10 to-transparent border-amber-400/20',
-  high: 'from-orange-400/10 to-transparent border-orange-400/20',
-  critical: 'from-red-400/10 to-transparent border-red-400/20',
+  low: 'from-emerald-50 to-white border-emerald-200',
+  medium: 'from-amber-50 to-white border-amber-200',
+  high: 'from-orange-50 to-white border-orange-200',
+  critical: 'from-red-50 to-white border-red-200',
+}
+
+const riskTrack = {
+  low: '#d1fae5',
+  medium: '#fef3c7',
+  high: '#ffedd5',
+  critical: '#fee2e2',
 }
 
 export function RiskBanner({ riskLevel, riskScore, riskReason }: RiskBannerProps) {
@@ -50,14 +57,14 @@ export function RiskBanner({ riskLevel, riskScore, riskReason }: RiskBannerProps
   const Icon = riskIcons[level] || Shield
   const color = getRiskBg(riskLevel)
   const bg = riskBg[level] || riskBg.medium
+  const track = riskTrack[level] || riskTrack.medium
 
   return (
     <div className={`rounded-2xl border bg-gradient-to-r ${bg} p-5`}>
       <div className="flex items-center gap-4">
-        {/* Score circle */}
         <div className="relative flex-shrink-0">
           <svg width="80" height="80" viewBox="0 0 80 80" className="-rotate-90">
-            <circle cx="40" cy="40" r="34" fill="none" stroke="#1e293b" strokeWidth="6" />
+            <circle cx="40" cy="40" r="34" fill="none" stroke={track} strokeWidth="6" />
             <circle
               cx="40" cy="40" r="34"
               fill="none"
@@ -76,7 +83,6 @@ export function RiskBanner({ riskLevel, riskScore, riskReason }: RiskBannerProps
           </div>
         </div>
 
-        {/* Text */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <Icon className="h-4 w-4" style={{ color }} />

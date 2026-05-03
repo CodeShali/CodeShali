@@ -26,14 +26,14 @@ function CompanyLogo({ domain, name }: { domain: string | null; name: string }) 
         <div className="absolute inset-0 rounded-xl skeleton" />
       )}
       {imgState === 'error' && (
-        <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-[#111827] border border-[#1e293b]">
+        <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-slate-100 border border-slate-200">
           <span className="font-display text-lg font-bold text-text-secondary">
             {name.charAt(0).toUpperCase()}
           </span>
         </div>
       )}
       {domain && imgState !== 'error' && (
-        <div className={`h-10 w-10 rounded-xl overflow-hidden border border-[#1e293b] bg-white flex items-center justify-center ${imgState === 'loading' ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}>
+        <div className={`h-10 w-10 rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center ${imgState === 'loading' ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}>
           <Image
             src={`https://logo.clearbit.com/${domain}`}
             alt={name}
@@ -51,7 +51,7 @@ function CompanyLogo({ domain, name }: { domain: string | null; name: string }) 
 
 function AuditSkeletonCard() {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-[#111827] bg-[#0f1829] p-4">
+    <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4">
       <div className="h-10 w-10 rounded-xl skeleton flex-shrink-0" />
       <div className="flex-1 space-y-2">
         <div className="h-4 w-32 rounded skeleton" />
@@ -86,7 +86,7 @@ export function RecentFeed() {
           {[1, 2, 3].map((i) => <AuditSkeletonCard key={i} />)}
         </div>
       ) : audits.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-[#111827] bg-[#0a0e1a] py-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 py-12 text-center">
           <Building2 className="h-10 w-10 text-text-muted mb-3" />
           <p className="text-sm font-medium text-text-secondary">No audits yet</p>
           <p className="text-xs text-text-muted mt-1">Search for a company above to get started</p>
@@ -97,7 +97,7 @@ export function RecentFeed() {
             <Link
               key={audit.id}
               href={`/audit/${slugify(audit.companyName)}`}
-              className="group flex items-center gap-4 rounded-xl border border-[#111827] bg-[#0f1829] p-4 hover:border-[#1e293b] hover:bg-[#111827] transition-all"
+              className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-300 hover:card-shadow transition-all"
             >
               <CompanyLogo domain={audit.companyDomain} name={audit.companyName} />
 

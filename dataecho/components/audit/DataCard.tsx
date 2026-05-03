@@ -28,11 +28,11 @@ interface DataCardProps {
 }
 
 const PLATFORM_COLORS: Record<string, string> = {
-  Reddit: 'text-orange-400 bg-orange-400/10',
-  GitHub: 'text-slate-300 bg-slate-300/10',
-  LinkedIn: 'text-blue-400 bg-blue-400/10',
-  Forum: 'text-purple-400 bg-purple-400/10',
-  News: 'text-green-400 bg-green-400/10',
+  Reddit: 'text-orange-600 bg-orange-50',
+  GitHub: 'text-slate-600 bg-slate-100',
+  LinkedIn: 'text-blue-600 bg-blue-50',
+  Forum: 'text-violet-600 bg-violet-50',
+  News: 'text-emerald-600 bg-emerald-50',
 }
 
 export function DataCard({
@@ -54,7 +54,7 @@ export function DataCard({
   expansionCount,
   onExpand,
   onPaywall,
-  accentColor = '#38bdf8',
+  accentColor = '#0ea5e9',
 }: DataCardProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -62,7 +62,6 @@ export function DataCard({
 
   const handleToggle = () => {
     if (!expanded) {
-      // Opening
       if (!canExpand) {
         onPaywall()
         return
@@ -72,26 +71,22 @@ export function DataCard({
     setExpanded(!expanded)
   }
 
-  const platformStyle = platform ? PLATFORM_COLORS[platform] || 'text-slate-400 bg-slate-400/10' : ''
+  const platformStyle = platform ? PLATFORM_COLORS[platform] || 'text-slate-600 bg-slate-100' : ''
 
   return (
     <div
       className={cn(
-        'rounded-xl border border-[#111827] bg-[#0f1829] overflow-hidden transition-all duration-200 hover:border-[#1e293b]',
-        expanded && 'border-[#1e293b]'
+        'rounded-xl border border-slate-200 bg-white overflow-hidden transition-all duration-200 hover:border-slate-300 hover:card-shadow',
+        expanded && 'border-slate-300 card-shadow'
       )}
     >
-      {/* Header / collapsed view */}
       <button
         onClick={handleToggle}
         className="w-full flex items-start gap-3 p-4 text-left"
       >
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span
-              className="text-sm font-semibold font-mono"
-              style={{ color: accentColor }}
-            >
+            <span className="text-sm font-semibold font-mono" style={{ color: accentColor }}>
               {label}
             </span>
 
@@ -112,11 +107,11 @@ export function DataCard({
             )}
 
             {recordsAffected && (
-              <span className="text-[10px] font-mono text-red-400">{recordsAffected} records</span>
+              <span className="text-[10px] font-mono text-red-500">{recordsAffected} records</span>
             )}
 
             {verified && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-green-400/10 border border-green-400/20 text-green-400">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
                 <CheckCircle2 className="h-2.5 w-2.5" />
                 VERIFIED
               </span>
@@ -139,16 +134,13 @@ export function DataCard({
         </div>
       </button>
 
-      {/* Expanded content */}
       {expanded && (
-        <div className="px-4 pb-4 border-t border-[#111827]">
+        <div className="px-4 pb-4 border-t border-slate-100">
           <div className="pt-4 space-y-3">
-            {/* Detail paragraph */}
             {detail && (
               <p className="text-sm text-text-secondary leading-relaxed">{detail}</p>
             )}
 
-            {/* Bullet items */}
             {items && items.length > 0 && (
               <ul className="space-y-1.5">
                 {items.map((item, i) => (
@@ -163,7 +155,6 @@ export function DataCard({
               </ul>
             )}
 
-            {/* Data exposed tags */}
             {dataExposed && dataExposed.length > 0 && (
               <div>
                 <p className="text-xs font-mono text-text-muted mb-2">Data exposed:</p>
@@ -171,7 +162,7 @@ export function DataCard({
                   {dataExposed.map((d, i) => (
                     <span
                       key={i}
-                      className="text-xs font-mono px-2 py-1 rounded-lg bg-red-400/10 text-red-400 border border-red-400/20"
+                      className="text-xs font-mono px-2 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200"
                     >
                       {d}
                     </span>
@@ -180,18 +171,16 @@ export function DataCard({
               </div>
             )}
 
-            {/* Tags */}
             {tags && tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {tags.map((t, i) => (
-                  <span key={i} className="text-xs font-mono px-2 py-1 rounded-lg bg-[#111827] text-text-muted">
+                  <span key={i} className="text-xs font-mono px-2 py-1 rounded-lg bg-slate-100 text-text-muted">
                     {t}
                   </span>
                 ))}
               </div>
             )}
 
-            {/* Source link */}
             {(source || url) && (
               <a
                 href={url || source}
@@ -208,10 +197,9 @@ export function DataCard({
         </div>
       )}
 
-      {/* Paywall blur overlay */}
       {!canExpand && expanded && (
         <div className="relative -mt-16 pb-4 px-4">
-          <div className="absolute inset-0 backdrop-blur-sm bg-[#0f1829]/60 rounded-b-xl flex flex-col items-center justify-center gap-3 p-4">
+          <div className="absolute inset-0 backdrop-blur-sm bg-white/70 rounded-b-xl flex flex-col items-center justify-center gap-3 p-4">
             <Lock className="h-6 w-6 text-text-muted" />
             <p className="text-sm font-medium text-text-secondary text-center">
               Upgrade to Pro to expand unlimited cards

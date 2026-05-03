@@ -19,7 +19,7 @@ export function Sidebar() {
   const plan = session?.user?.plan || 'FREE'
 
   return (
-    <aside className="hidden lg:flex flex-col w-60 min-h-screen border-r border-[#111827] bg-[#060a12]">
+    <aside className="hidden lg:flex flex-col w-60 min-h-screen border-r border-slate-200 bg-white">
       <div className="flex-1 py-6 px-3">
         <nav className="space-y-1">
           {navItems.map(({ href, label, icon: Icon }) => {
@@ -31,8 +31,8 @@ export function Sidebar() {
                 className={cn(
                   'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                   active
-                    ? 'bg-accent-amber/10 text-accent-amber border border-accent-amber/20'
-                    : 'text-text-secondary hover:bg-[#0f1829] hover:text-text-primary'
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'text-text-secondary hover:bg-slate-100 hover:text-text-primary'
                 )}
               >
                 <Icon className="h-4 w-4 flex-shrink-0" />
@@ -44,15 +44,14 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Plan upgrade CTA */}
       {plan === 'FREE' && (
         <div className="p-3 pb-6">
-          <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="h-4 w-4 text-accent-amber" />
-              <span className="text-sm font-semibold text-text-primary">Upgrade to Pro</span>
+              <span className="text-sm font-semibold text-amber-800">Upgrade to Pro</span>
             </div>
-            <p className="text-xs text-text-secondary mb-3">
+            <p className="text-xs text-amber-700 mb-3">
               Get 20 audits/day, unlimited expansions, and full details.
             </p>
             <Link href="/dashboard?upgrade=true">

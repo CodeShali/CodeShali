@@ -8,13 +8,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-accent-amber text-bg-primary font-semibold hover:bg-amber-400',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        outline: 'border border-[#1e293b] bg-transparent hover:bg-[#0f1829] hover:text-text-primary',
-        secondary: 'bg-[#0f1829] text-text-primary hover:bg-[#111827]',
-        ghost: 'hover:bg-[#0f1829] hover:text-text-primary',
+        default: 'bg-accent-amber text-white font-semibold hover:bg-amber-500',
+        destructive: 'bg-red-500 text-white hover:bg-red-600',
+        outline: 'border border-slate-300 bg-white hover:bg-slate-50 hover:text-slate-900 text-slate-700',
+        secondary: 'bg-slate-100 text-slate-800 hover:bg-slate-200',
+        ghost: 'hover:bg-slate-100 hover:text-slate-900 text-slate-600',
         link: 'text-accent-amber underline-offset-4 hover:underline',
-        pro: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold hover:from-amber-400 hover:to-orange-400 shadow-lg shadow-amber-500/20',
+        pro: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold hover:from-amber-400 hover:to-orange-400 shadow-md shadow-amber-500/25',
       },
       size: {
         default: 'h-10 px-4 py-2',

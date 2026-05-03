@@ -24,19 +24,18 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[#111827] bg-[#060a12]/80 px-4 backdrop-blur-md md:px-6">
+      <nav className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur-md md:px-6">
         <div className="flex items-center gap-3">
-          {/* Mobile hamburger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-lg hover:bg-[#0f1829] text-text-muted hover:text-text-secondary transition-colors"
+            className="lg:hidden p-2 rounded-lg hover:bg-slate-100 text-text-muted hover:text-text-secondary transition-colors"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-amber/10 border border-accent-amber/20">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 border border-amber-200">
               <span className="font-display text-sm font-bold text-accent-amber">D</span>
             </div>
             <span className="font-display text-lg font-bold text-text-primary hidden sm:block">DataEcho</span>
@@ -57,12 +56,12 @@ export function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-[#0f1829] transition-colors"
+                className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-slate-100 transition-colors"
               >
                 {session.user.image ? (
                   <Image src={session.user.image} alt="Avatar" width={28} height={28} className="rounded-full" />
                 ) : (
-                  <div className="h-7 w-7 rounded-full bg-accent-amber/20 flex items-center justify-center">
+                  <div className="h-7 w-7 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
                     <span className="text-xs font-semibold text-accent-amber">
                       {session.user.name?.charAt(0) || session.user.email?.charAt(0)}
                     </span>
@@ -82,24 +81,24 @@ export function Navbar() {
               {dropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border border-[#1e293b] bg-[#0a0e1a] py-1 shadow-2xl">
+                  <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border border-slate-200 bg-white py-1 card-shadow-md">
                     {plan !== 'FREE' && (
                       <button
                         onClick={handleBillingPortal}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-[#0f1829] hover:text-text-primary transition-colors"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-slate-50 hover:text-text-primary transition-colors"
                       >
                         <CreditCard className="h-4 w-4" />
                         Manage Billing
                       </button>
                     )}
-                    <button className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-[#0f1829] hover:text-text-primary transition-colors">
+                    <button className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-slate-50 hover:text-text-primary transition-colors">
                       <Settings className="h-4 w-4" />
                       Settings
                     </button>
-                    <div className="my-1 border-t border-[#111827]" />
+                    <div className="my-1 border-t border-slate-100" />
                     <button
                       onClick={() => signOut({ callbackUrl: '/login' })}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
                     >
                       <LogOut className="h-4 w-4" />
                       Sign Out
@@ -112,19 +111,18 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile slide-down menu */}
       {mobileMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-30 bg-slate-900/20 lg:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="fixed top-16 left-0 right-0 z-30 border-b border-[#111827] bg-[#060a12] lg:hidden">
+          <div className="fixed top-16 left-0 right-0 z-30 border-b border-slate-200 bg-white lg:hidden">
             <div className="px-4 py-4 space-y-1">
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-text-secondary hover:bg-[#0f1829] hover:text-text-primary transition-colors"
+                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-text-secondary hover:bg-slate-100 hover:text-text-primary transition-colors"
               >
                 <Home className="h-4 w-4" />
                 Home
@@ -132,14 +130,14 @@ export function Navbar() {
               <Link
                 href="/dashboard/history"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-text-secondary hover:bg-[#0f1829] hover:text-text-primary transition-colors"
+                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-text-secondary hover:bg-slate-100 hover:text-text-primary transition-colors"
               >
                 <Clock className="h-4 w-4" />
                 History
               </Link>
 
               {plan === 'FREE' && (
-                <div className="pt-2 border-t border-[#111827]">
+                <div className="pt-2 border-t border-slate-100">
                   <Link href="/dashboard?upgrade=true" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="pro" className="w-full mt-2 gap-1.5 text-sm">
                       <Zap className="h-4 w-4" />

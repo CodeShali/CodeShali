@@ -32,10 +32,8 @@ export function PaywallModal({ defaultOpen = false, trigger, onClose }: PaywallM
         body: JSON.stringify({ priceId }),
       })
       const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      }
-    } catch {
+      if (data.url) window.location.href = data.url
+    } finally {
       setLoading(null)
     }
   }
@@ -45,24 +43,24 @@ export function PaywallModal({ defaultOpen = false, trigger, onClose }: PaywallM
       key: 'PRO',
       name: 'Pro',
       icon: Zap,
-      iconColor: 'text-amber-400',
+      iconColor: 'text-amber-500',
       price: interval === 'monthly' ? PLANS.PRO.monthly.price : PLANS.PRO.yearly.price,
       priceId: interval === 'monthly' ? PLANS.PRO.monthly.priceId : PLANS.PRO.yearly.priceId,
       perMonth: interval === 'yearly' ? Math.round(PLANS.PRO.yearly.price / 12) : PLANS.PRO.monthly.price,
       features: PLANS.PRO.features,
-      accent: 'border-amber-400/30 bg-amber-400/5',
+      accent: 'border-amber-200 bg-amber-50/60',
       buttonVariant: 'pro' as const,
     },
     {
       key: 'ENTERPRISE',
       name: 'Enterprise',
       icon: Crown,
-      iconColor: 'text-purple-400',
+      iconColor: 'text-violet-500',
       price: interval === 'monthly' ? PLANS.ENTERPRISE.monthly.price : PLANS.ENTERPRISE.yearly.price,
       priceId: interval === 'monthly' ? PLANS.ENTERPRISE.monthly.priceId : PLANS.ENTERPRISE.yearly.priceId,
       perMonth: interval === 'yearly' ? Math.round(PLANS.ENTERPRISE.yearly.price / 12) : PLANS.ENTERPRISE.monthly.price,
       features: PLANS.ENTERPRISE.features,
-      accent: 'border-purple-400/30 bg-purple-400/5',
+      accent: 'border-violet-200 bg-violet-50/60',
       buttonVariant: 'outline' as const,
     },
   ]
@@ -74,17 +72,17 @@ export function PaywallModal({ defaultOpen = false, trigger, onClose }: PaywallM
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-[#1e293b] bg-[#0a0e1a] shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="relative px-6 pt-6 pb-4 text-center border-b border-[#111827]">
+        <div className="relative px-6 pt-6 pb-4 text-center border-b border-slate-100">
           <button
             onClick={handleClose}
-            className="absolute right-4 top-4 p-1.5 rounded-lg hover:bg-[#0f1829] text-text-muted hover:text-text-secondary transition-colors"
+            className="absolute right-4 top-4 p-1.5 rounded-lg hover:bg-slate-100 text-text-muted hover:text-text-secondary transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-amber/10 border border-accent-amber/20 mb-3">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 border border-amber-200 mb-3">
             <Zap className="h-6 w-6 text-accent-amber" />
           </div>
           <h2 className="font-display text-2xl font-bold text-text-primary mb-1">
@@ -94,13 +92,12 @@ export function PaywallModal({ defaultOpen = false, trigger, onClose }: PaywallM
             Get unlimited audits, full details, and unrestricted chat.
           </p>
 
-          {/* Billing toggle */}
           <div className="flex items-center justify-center gap-3 mt-4">
             <button
               onClick={() => setInterval('monthly')}
               className={`text-sm font-medium px-4 py-1.5 rounded-full transition-colors ${
                 interval === 'monthly'
-                  ? 'bg-[#0f1829] text-text-primary border border-[#1e293b]'
+                  ? 'bg-slate-900 text-white'
                   : 'text-text-muted hover:text-text-secondary'
               }`}
             >
@@ -110,12 +107,12 @@ export function PaywallModal({ defaultOpen = false, trigger, onClose }: PaywallM
               onClick={() => setInterval('yearly')}
               className={`text-sm font-medium px-4 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
                 interval === 'yearly'
-                  ? 'bg-[#0f1829] text-text-primary border border-[#1e293b]'
+                  ? 'bg-slate-900 text-white'
                   : 'text-text-muted hover:text-text-secondary'
               }`}
             >
               Yearly
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-green-400/20 text-green-400">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
                 -30%
               </span>
             </button>
@@ -127,10 +124,7 @@ export function PaywallModal({ defaultOpen = false, trigger, onClose }: PaywallM
           {plans.map((plan) => {
             const Icon = plan.icon
             return (
-              <div
-                key={plan.key}
-                className={`rounded-xl border p-5 ${plan.accent}`}
-              >
+              <div key={plan.key} className={`rounded-xl border p-5 ${plan.accent}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <Icon className={`h-5 w-5 ${plan.iconColor}`} />
                   <span className="font-display font-semibold text-text-primary">{plan.name}</span>
@@ -151,7 +145,7 @@ export function PaywallModal({ defaultOpen = false, trigger, onClose }: PaywallM
                 <ul className="space-y-2 mb-5">
                   {plan.features.map((f, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs text-text-secondary">
-                      <Check className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-green-400" />
+                      <Check className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-emerald-500" />
                       {f}
                     </li>
                   ))}

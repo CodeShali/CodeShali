@@ -41,7 +41,6 @@ function StatCard({
   sub,
   icon: Icon,
   color = 'text-text-primary',
-  positive,
 }: {
   label: string
   value: string
@@ -51,14 +50,14 @@ function StatCard({
   positive?: boolean
 }) {
   return (
-    <div className="rounded-xl border border-[#111827] bg-[#0a0e1a] p-5">
+    <div className="rounded-xl border border-slate-200 bg-white p-5 card-shadow">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-mono text-text-muted uppercase tracking-wider mb-2">{label}</p>
           <p className={`text-2xl font-bold font-display ${color}`}>{value}</p>
           {sub && <p className="text-xs text-text-muted mt-1">{sub}</p>}
         </div>
-        <div className={`p-2 rounded-lg bg-[#0f1829] ${color}`}>
+        <div className={`p-2 rounded-lg bg-slate-100 ${color}`}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -78,12 +77,12 @@ function PlanRow({
   const costPerAudit = data && data.audits > 0 ? data.cost / data.audits : 0
   const colors: Record<string, string> = {
     FREE: 'text-text-secondary',
-    PRO: 'text-accent-amber',
-    ENTERPRISE: 'text-purple-400',
+    PRO: 'text-amber-600',
+    ENTERPRISE: 'text-violet-600',
   }
 
   return (
-    <div className="flex items-center gap-4 py-3 border-b border-[#111827] last:border-0">
+    <div className="flex items-center gap-4 py-3 border-b border-slate-100 last:border-0">
       <div className="w-28">
         <span className={`text-sm font-semibold ${colors[plan] || 'text-text-secondary'}`}>{plan}</span>
         <p className="text-xs text-text-muted">{PLAN_PRICE[plan]}</p>
@@ -130,25 +129,26 @@ export default function AdminPage() {
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login')
     if (status === 'authenticated') fetchMetrics()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, days])
 
   if (status === 'loading') return null
 
   return (
-    <div className="min-h-screen bg-[#060a12] text-text-primary">
-      <div className="border-b border-[#111827] px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-bg-primary text-text-primary">
+      <div className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <BarChart3 className="h-5 w-5 text-accent-amber" />
           <span className="font-display text-lg font-bold">Admin — Cost & Revenue</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex rounded-lg border border-[#111827] overflow-hidden text-xs">
+          <div className="flex rounded-lg border border-slate-200 overflow-hidden text-xs">
             {[7, 30, 90].map((d) => (
               <button
                 key={d}
                 onClick={() => setDays(d)}
                 className={`px-3 py-1.5 font-mono transition-colors ${
-                  days === d ? 'bg-accent-amber/10 text-accent-amber' : 'text-text-muted hover:text-text-secondary'
+                  days === d ? 'bg-amber-50 text-amber-700' : 'text-text-muted hover:text-text-secondary bg-white'
                 }`}
               >
                 {d}d
@@ -163,7 +163,7 @@ export default function AdminPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         {error && (
-          <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             <AlertTriangle className="h-4 w-4" />
             {error}
           </div>
@@ -204,14 +204,13 @@ export default function AdminPage() {
             </div>
 
             {/* Cost by plan */}
-            <div className="rounded-xl border border-[#111827] bg-[#0a0e1a] overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#111827] flex items-center gap-2">
+            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden card-shadow">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
                 <Activity className="h-4 w-4 text-text-muted" />
                 <h2 className="text-sm font-medium text-text-secondary">Cost Breakdown by Plan</h2>
                 <span className="text-xs text-text-muted ml-auto">Last {days} days</span>
               </div>
               <div className="px-5">
-                {/* Header */}
                 <div className="flex items-center gap-4 py-2 text-xs font-mono text-text-muted">
                   <div className="w-28">Plan</div>
                   <div className="flex-1">Model</div>
@@ -233,8 +232,8 @@ export default function AdminPage() {
 
             {/* Model breakdown */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-[#111827] bg-[#0a0e1a] overflow-hidden">
-                <div className="px-5 py-4 border-b border-[#111827]">
+              <div className="rounded-xl border border-slate-200 bg-white overflow-hidden card-shadow">
+                <div className="px-5 py-4 border-b border-slate-100">
                   <h2 className="text-sm font-medium text-text-secondary">Model Usage</h2>
                 </div>
                 <div className="px-5 py-3 space-y-3">
@@ -244,7 +243,7 @@ export default function AdminPage() {
                         <p className="text-sm font-mono text-text-primary">{model}</p>
                         <p className="text-xs text-text-muted">{data.audits} audits</p>
                       </div>
-                      <span className="text-sm font-mono text-red-400">${data.cost.toFixed(4)}</span>
+                      <span className="text-sm font-mono text-red-500">${data.cost.toFixed(4)}</span>
                     </div>
                   ))}
                   {Object.keys(metrics.costs.byModel).length === 0 && (
@@ -253,17 +252,16 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Plan config reference */}
-              <div className="rounded-xl border border-[#111827] bg-[#0a0e1a] overflow-hidden">
-                <div className="px-5 py-4 border-b border-[#111827]">
+              <div className="rounded-xl border border-slate-200 bg-white overflow-hidden card-shadow">
+                <div className="px-5 py-4 border-b border-slate-100">
                   <h2 className="text-sm font-medium text-text-secondary">Plan Config (Live)</h2>
                   <p className="text-xs text-text-muted mt-0.5">Edit backend/services/claude_service.py to change</p>
                 </div>
                 <div className="px-5 py-3 space-y-3">
                   {[
                     { plan: 'FREE', model: 'claude-haiku-4-5', maxTokens: 1500, searches: 2, color: 'text-text-secondary' },
-                    { plan: 'PRO', model: 'claude-sonnet-4-6', maxTokens: 3000, searches: 5, color: 'text-accent-amber' },
-                    { plan: 'ENTERPRISE', model: 'claude-opus-4-7', maxTokens: 6000, searches: 10, color: 'text-purple-400' },
+                    { plan: 'PRO', model: 'claude-sonnet-4-6', maxTokens: 3000, searches: 5, color: 'text-amber-600' },
+                    { plan: 'ENTERPRISE', model: 'claude-opus-4-7', maxTokens: 6000, searches: 10, color: 'text-violet-600' },
                   ].map((cfg) => (
                     <div key={cfg.plan} className="flex items-start justify-between gap-4">
                       <div>
@@ -282,8 +280,8 @@ export default function AdminPage() {
 
             {/* Daily cost chart (table form) */}
             {Object.keys(metrics.costs.daily).length > 0 && (
-              <div className="rounded-xl border border-[#111827] bg-[#0a0e1a] overflow-hidden">
-                <div className="px-5 py-4 border-b border-[#111827]">
+              <div className="rounded-xl border border-slate-200 bg-white overflow-hidden card-shadow">
+                <div className="px-5 py-4 border-b border-slate-100">
                   <h2 className="text-sm font-medium text-text-secondary">Daily API Costs</h2>
                 </div>
                 <div className="px-5 py-3 overflow-x-auto">
@@ -296,7 +294,7 @@ export default function AdminPage() {
                         return (
                           <div key={day} className="flex flex-col items-center gap-1" title={`${day}: $${cost.toFixed(4)}`}>
                             <div
-                              className="w-5 rounded-t bg-red-400/40 hover:bg-red-400/70 transition-colors cursor-default"
+                              className="w-5 rounded-t bg-red-200 hover:bg-red-400 transition-colors cursor-default"
                               style={{ height: `${heightPct}px` }}
                             />
                             <span className="text-[9px] font-mono text-text-muted rotate-45 origin-left ml-1">
@@ -313,10 +311,10 @@ export default function AdminPage() {
             {/* Profitability note */}
             <div className={`rounded-xl border px-5 py-4 ${
               metrics.profit.inPeriod >= 0
-                ? 'border-green-400/20 bg-green-400/5'
-                : 'border-red-400/20 bg-red-400/5'
+                ? 'border-emerald-200 bg-emerald-50'
+                : 'border-red-200 bg-red-50'
             }`}>
-              <p className={`text-sm font-medium ${metrics.profit.inPeriod >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <p className={`text-sm font-medium ${metrics.profit.inPeriod >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                 {metrics.profit.inPeriod >= 0
                   ? `Profitable: earning $${metrics.profit.inPeriod.toFixed(2)} more than Claude API costs this period (${metrics.profit.marginPct}% margin)`
                   : `Loss: spending $${Math.abs(metrics.profit.inPeriod).toFixed(2)} more on Claude API than revenue this period`

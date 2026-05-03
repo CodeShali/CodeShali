@@ -185,7 +185,7 @@ export default function AuditPage() {
         <div className="text-5xl mb-4">🔍</div>
         <h2 className="font-display text-2xl font-bold text-text-primary mb-2">Sign in to view this audit</h2>
         <p className="text-text-secondary mb-6">
-          This audit hasn't been run yet, or you need to sign in to view it.
+          This audit hasn&apos;t been run yet, or you need to sign in to view it.
         </p>
         <div className="flex gap-3 justify-center">
           <Button variant="outline" asChild>
@@ -201,7 +201,7 @@ export default function AuditPage() {
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <div className="text-5xl mb-4">⚡</div>
         <h2 className="font-display text-2xl font-bold text-text-primary mb-2">Daily limit reached</h2>
-        <p className="text-text-secondary mb-6">You've used all your free audits for today. Upgrade for more.</p>
+        <p className="text-text-secondary mb-6">You&apos;ve used all your free audits for today. Upgrade for more.</p>
         <div className="flex gap-3 justify-center">
           <Button variant="outline" asChild>
             <Link href="/dashboard"><ArrowLeft className="h-4 w-4 mr-1.5" />Back</Link>
@@ -239,7 +239,7 @@ export default function AuditPage() {
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6 print-page">
         {/* Shared-link banner for unauthenticated viewers */}
         {!isAuthenticated && (
-          <div className="rounded-xl border border-accent-amber/20 bg-accent-amber/5 px-4 py-3 flex items-center justify-between gap-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-4">
             <p className="text-sm text-text-secondary">
               Viewing a shared DataEcho audit. <Link href="/login" className="text-accent-amber hover:underline">Sign in</Link> to run your own.
             </p>
@@ -285,7 +285,7 @@ export default function AuditPage() {
         </div>
 
         {/* Company header */}
-        <div className="rounded-2xl border border-[#111827] bg-[#0f1829] p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white card-shadow p-6">
           <CompanyHeader
             companyName={companyName}
             companyDomain={auditData.companyDomain || null}
@@ -305,7 +305,7 @@ export default function AuditPage() {
         />
 
         {/* Three-layer sections */}
-        <div className="rounded-2xl border border-[#111827] bg-[#0f1829] p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white card-shadow p-6">
           <LayerSection
             data={auditData}
             plan={plan}

@@ -19,8 +19,8 @@ function SearchModal({ company, onClose, onConfirm }: SearchModalProps) {
   const [size, setSize] = useState('')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-[#1e293b] bg-[#0a0e1a] p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-1">
             <Building2 className="h-5 w-5 text-accent-amber" />
@@ -113,12 +113,12 @@ export function SearchBar() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search any company…"
-            className="w-full h-14 pl-12 pr-36 rounded-2xl border border-[#1e293b] bg-[#0a0e1a] text-text-primary placeholder:text-text-muted text-base focus:outline-none focus:ring-2 focus:ring-accent-amber focus:border-transparent transition-all hover:border-[#1e293b] glow-amber"
+            className="w-full h-14 pl-12 pr-36 rounded-2xl border border-slate-300 bg-white text-text-primary placeholder:text-text-muted text-base focus:outline-none focus:ring-2 focus:ring-accent-amber focus:border-transparent transition-all hover:border-slate-400 card-shadow"
           />
           <button
             type="submit"
             disabled={!query.trim() || loading}
-            className="absolute right-2 flex items-center gap-2 rounded-xl bg-accent-amber px-5 py-2.5 text-sm font-semibold text-bg-primary transition-all hover:bg-amber-400 disabled:opacity-50"
+            className="absolute right-2 flex items-center gap-2 rounded-xl bg-accent-amber px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-amber-500 disabled:opacity-50"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Audit

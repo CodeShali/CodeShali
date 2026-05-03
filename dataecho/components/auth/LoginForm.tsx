@@ -34,25 +34,23 @@ export function LoginForm() {
 
   return (
     <div className="relative z-10 w-full max-w-md">
-      <div className="rounded-2xl border border-[#1e293b] bg-[#0a0e1a] p-8 shadow-2xl">
-        {/* Logo */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
         <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-amber/10 border border-accent-amber/20">
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 border border-amber-200">
             <span className="font-display text-2xl font-bold text-accent-amber">D</span>
           </div>
           <h1 className="font-display text-2xl font-bold text-text-primary">DataEcho</h1>
           <p className="mt-2 text-sm text-text-secondary">See what AI knows about you.</p>
         </div>
 
-        {/* Auth buttons */}
         <div className="space-y-3">
           <button
             onClick={() => handleSignIn('google')}
             disabled={loadingProvider !== null}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#e2e8f0]/20 bg-white px-4 py-3 text-sm font-medium text-gray-900 transition-all hover:bg-gray-50 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 disabled:opacity-60"
           >
             {loadingProvider === 'google' ? (
-              <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+              <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
             ) : (
               <GoogleIcon />
             )}
@@ -62,7 +60,7 @@ export function LoginForm() {
           <button
             onClick={() => handleSignIn('github')}
             disabled={loadingProvider !== null}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#1e293b] bg-[#161b22] px-4 py-3 text-sm font-medium text-white transition-all hover:bg-[#1c2431] disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-slate-800 disabled:opacity-60"
           >
             {loadingProvider === 'github' ? (
               <Loader2 className="h-4 w-4 animate-spin text-white" />

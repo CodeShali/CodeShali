@@ -22,22 +22,19 @@ export function UsageCounter() {
   }, [])
 
   if (!usage) {
-    return (
-      <div className="h-8 w-48 rounded-full skeleton" />
-    )
+    return <div className="h-8 w-48 rounded-full skeleton" />
   }
 
   if (!Number.isFinite(usage.limit) || usage.plan !== 'FREE') {
     return (
-      <div className="flex items-center gap-1.5 rounded-full border border-accent-amber/20 bg-accent-amber/5 px-4 py-1.5 text-sm font-mono">
+      <div className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-sm font-mono">
         <InfinityIcon className="h-3.5 w-3.5 text-accent-amber" />
-        <span className="text-accent-amber font-medium capitalize">{usage.plan.toLowerCase()}</span>
+        <span className="text-amber-700 font-medium capitalize">{usage.plan.toLowerCase()}</span>
         <span className="text-text-muted">— unlimited audits</span>
       </div>
     )
   }
 
-  const pct = (usage.current / usage.limit) * 100
   const isNearLimit = usage.current >= usage.limit - 1
   const isAtLimit = usage.current >= usage.limit
 
@@ -46,15 +43,15 @@ export function UsageCounter() {
       <div
         className={`flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-mono transition-colors ${
           isAtLimit
-            ? 'border-red-400/30 bg-red-400/10 text-red-400'
+            ? 'border-red-200 bg-red-50 text-red-700'
             : isNearLimit
-            ? 'border-amber-400/30 bg-amber-400/10 text-amber-400'
-            : 'border-[#1e293b] bg-[#0a0e1a] text-text-secondary'
+            ? 'border-amber-200 bg-amber-50 text-amber-700'
+            : 'border-slate-200 bg-white text-text-secondary'
         }`}
       >
         <Zap className="h-3.5 w-3.5" />
         <span>
-          <span className={isAtLimit ? 'text-red-400 font-semibold' : 'text-text-primary font-semibold'}>
+          <span className={isAtLimit ? 'text-red-700 font-semibold' : 'text-text-primary font-semibold'}>
             {usage.current}
           </span>
           <span className="text-text-muted"> of {usage.limit} free audits used today</span>

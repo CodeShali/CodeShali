@@ -35,7 +35,7 @@ export default async function DashboardPage({
 
       {/* Success/cancel toasts */}
       {justUpgraded && (
-        <div className="mb-6 rounded-xl border border-green-400/20 bg-green-400/10 px-4 py-3 text-sm text-green-400 flex items-center gap-2">
+        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 flex items-center gap-2">
           <span>🎉</span>
           <span>Your plan has been upgraded successfully!</span>
         </div>

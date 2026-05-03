@@ -24,12 +24,12 @@ function LandingNav() {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-[#060a12]/90 backdrop-blur-md border-b border-[#111827]' : ''
+        scrolled ? 'bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm' : ''
       }`}
     >
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-accent-amber/10 border border-accent-amber/20 flex items-center justify-center">
+          <div className="h-8 w-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center">
             <span className="font-display text-sm font-bold text-accent-amber">D</span>
           </div>
           <span className="font-display text-lg font-bold text-text-primary">DataEcho</span>
@@ -61,7 +61,7 @@ function LandingNav() {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t border-[#111827] bg-[#060a12] px-6 py-4 space-y-3">
+        <div className="md:hidden border-t border-slate-200 bg-white px-6 py-4 space-y-3 shadow-lg">
           {['#features', '#how-it-works', '#pricing'].map((href) => (
             <a
               key={href}
@@ -119,28 +119,28 @@ function ProductDemo() {
   useEffect(() => {
     startCycle()
     return () => clearTimeout(timerRef.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
     <div className="relative w-full max-w-md mx-auto">
-      {/* Ambient glow */}
-      <div className="absolute -inset-8 bg-amber-500/5 rounded-3xl blur-2xl animate-glow-breathe pointer-events-none" />
-      <div className="absolute -inset-4 bg-sky-500/5 rounded-3xl blur-xl animate-glow-breathe pointer-events-none" style={{ animationDelay: '1.5s' }} />
+      {/* Subtle ambient glow */}
+      <div className="absolute -inset-8 bg-amber-500/5 rounded-3xl blur-2xl pointer-events-none" />
 
-      <div className="relative rounded-2xl border border-[#1e293b] bg-[#0a0e1a] shadow-2xl overflow-hidden">
+      <div className="relative rounded-2xl border border-slate-200 bg-white card-shadow overflow-hidden">
         {/* Window chrome */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-[#111827] bg-[#060a12]">
-          <div className="h-3 w-3 rounded-full bg-red-500/60" />
-          <div className="h-3 w-3 rounded-full bg-amber-500/60" />
-          <div className="h-3 w-3 rounded-full bg-green-500/60" />
-          <div className="flex-1 mx-4 h-5 rounded bg-[#0f1829] border border-[#111827] flex items-center px-2">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
+          <div className="h-3 w-3 rounded-full bg-red-400" />
+          <div className="h-3 w-3 rounded-full bg-amber-400" />
+          <div className="h-3 w-3 rounded-full bg-green-400" />
+          <div className="flex-1 mx-4 h-5 rounded bg-white border border-slate-200 flex items-center px-2">
             <span className="text-[10px] font-mono text-text-muted">dataecho.ai/audit</span>
           </div>
         </div>
 
         <div className="p-5 space-y-4 min-h-[320px]">
           {/* Search bar */}
-          <div className="relative flex items-center gap-2 bg-[#060a12] border border-[#1e293b] rounded-xl px-4 py-3">
+          <div className="relative flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
             <Search className="h-4 w-4 text-text-muted flex-shrink-0" />
             <span className="text-sm text-text-primary font-mono">
               {typed || (phase === 'idle' ? '' : '')}
@@ -153,7 +153,7 @@ function ProductDemo() {
             </span>
             <div className="ml-auto">
               <div className={`h-7 w-7 rounded-lg flex items-center justify-center transition-all ${
-                typed ? 'bg-accent-amber/20 border border-accent-amber/30' : 'bg-[#0f1829] border border-[#111827]'
+                typed ? 'bg-amber-50 border border-amber-200' : 'bg-slate-100 border border-slate-200'
               }`}>
                 <ArrowRight className={`h-3.5 w-3.5 ${typed ? 'text-accent-amber' : 'text-text-muted'}`} />
               </div>
@@ -164,7 +164,7 @@ function ProductDemo() {
           {phase === 'loading' && (
             <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-fade-in">
               <div className="relative h-12 w-12">
-                <div className="absolute inset-0 rounded-full border-2 border-accent-amber/20" />
+                <div className="absolute inset-0 rounded-full border-2 border-amber-200" />
                 <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent-amber animate-spin" />
               </div>
               <div className="space-y-1 text-center">
@@ -184,24 +184,24 @@ function ProductDemo() {
               {/* Company header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-9 w-9 rounded-xl bg-white flex items-center justify-center text-xs font-bold text-gray-800">A</div>
+                  <div className="h-9 w-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-700">A</div>
                   <div>
                     <p className="text-sm font-display font-bold text-text-primary">Adobe Inc.</p>
                     <p className="text-xs text-text-muted font-mono">adobe.com</p>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full border border-orange-400/30 bg-orange-400/10 text-orange-400">
+                <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full border border-orange-200 bg-orange-50 text-orange-600">
                   HIGH RISK
                 </span>
               </div>
 
               {/* Risk bar */}
-              <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
+              <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-mono text-text-muted">RISK SCORE</span>
-                  <span className="text-sm font-bold font-mono text-orange-400">78 / 100</span>
+                  <span className="text-sm font-bold font-mono text-orange-600">78 / 100</span>
                 </div>
-                <div className="h-1.5 bg-[#111827] rounded-full overflow-hidden">
+                <div className="h-1.5 bg-orange-100 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all duration-1000"
                     style={{ width: '78%' }}
@@ -212,9 +212,9 @@ function ProductDemo() {
               {/* Tabs */}
               <div className="flex gap-1.5">
                 {[
-                  { label: 'LLM', color: '#38bdf8', icon: Brain },
-                  { label: 'Breaches', color: '#f87171', icon: ShieldOff, badge: '3' },
-                  { label: 'Infra', color: '#fb923c', icon: Server },
+                  { label: 'LLM', color: '#0ea5e9', icon: Brain },
+                  { label: 'Breaches', color: '#ef4444', icon: ShieldOff, badge: '3' },
+                  { label: 'Infra', color: '#f97316', icon: Server },
                 ].map(({ label, color, icon: Icon, badge }) => (
                   <div
                     key={label}
@@ -233,10 +233,10 @@ function ProductDemo() {
               </div>
 
               {/* Sample breach card */}
-              <div className="rounded-xl border border-green-400/20 bg-green-400/5 px-3 py-2.5">
+              <div className="rounded-xl border border-green-200 bg-green-50 px-3 py-2.5">
                 <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle2 className="h-3 w-3 text-green-400 flex-shrink-0" />
-                  <span className="text-[10px] font-mono text-green-400">VERIFIED · HIBP</span>
+                  <CheckCircle2 className="h-3 w-3 text-green-600 flex-shrink-0" />
+                  <span className="text-[10px] font-mono text-green-700">VERIFIED · HIBP</span>
                 </div>
                 <p className="text-xs font-semibold text-text-primary">Adobe 2013 Breach</p>
                 <p className="text-[11px] text-text-muted mt-0.5">152M records · Passwords, Emails, Hints</p>
@@ -271,7 +271,7 @@ const MARQUEE_ITEMS = [
 function StatsMarquee() {
   const items = [...MARQUEE_ITEMS, ...MARQUEE_ITEMS]
   return (
-    <div className="overflow-hidden border-y border-[#111827] bg-[#060a12]/60 py-4">
+    <div className="overflow-hidden border-y border-slate-200 bg-slate-50 py-4">
       <div className="flex animate-marquee gap-12 w-max">
         {items.map((item, i) => {
           const Icon = item.icon
@@ -301,14 +301,14 @@ const STEPS = [
     icon: Layers,
     title: 'Real data fetched in parallel',
     description: 'We simultaneously query Have I Been Pwned, Shodan, GitHub code search, certificate transparency logs, and Claude AI — all in under 10 seconds.',
-    color: '#38bdf8',
+    color: '#0ea5e9',
   },
   {
     number: '03',
     icon: BarChart3,
     title: 'AI-enriched report delivered',
     description: 'Claude analyzes verified data and generates a structured 3-layer report: LLM knowledge, confirmed breaches, and infrastructure exposure.',
-    color: '#4ade80',
+    color: '#10b981',
   },
 ]
 
@@ -318,14 +318,14 @@ const FEATURES = [
     icon: Brain,
     title: 'LLM Knowledge Layer',
     description: 'See exactly what AI models like Claude, GPT, and Gemini know about a company from training data — leadership, financials, controversies, legal issues.',
-    color: '#38bdf8',
+    color: '#0ea5e9',
     items: ['Executive profiles', 'Product history', 'Public controversies', 'Partnership data'],
   },
   {
     icon: ShieldOff,
     title: 'Breach Intelligence',
     description: 'Real verified breach records from Have I Been Pwned\'s authoritative database, enriched with AI context about impact and remediation.',
-    color: '#f87171',
+    color: '#ef4444',
     items: ['HIBP verified records', 'Records affected count', 'Data types exposed', 'Historical timeline'],
     badge: 'VERIFIED',
   },
@@ -333,7 +333,7 @@ const FEATURES = [
     icon: Server,
     title: 'Infrastructure Exposure',
     description: 'Certificate transparency logs reveal every subdomain. Shodan maps open ports and known CVEs on live infrastructure.',
-    color: '#fb923c',
+    color: '#f97316',
     items: ['Subdomain mapping', 'Open port detection', 'CVE vulnerability scan', 'Service fingerprinting'],
     badge: 'VERIFIED',
   },
@@ -341,7 +341,7 @@ const FEATURES = [
     icon: Globe,
     title: 'Code & Data Leaks',
     description: 'GitHub code search finds public repositories containing company domains, internal URLs, and potentially leaked configuration files.',
-    color: '#a78bfa',
+    color: '#8b5cf6',
     items: ['Public repo scanning', 'Internal URL detection', 'Config file leaks', 'Employee disclosures'],
     badge: 'VERIFIED',
   },
@@ -407,29 +407,29 @@ const PLANS = [
 // ─── Main page ─────────────────────────────────────────────────────
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#060a12] text-text-primary overflow-x-hidden">
+    <div className="min-h-screen bg-white text-text-primary overflow-x-hidden">
       <LandingNav />
 
       {/* ── Hero ── */}
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
         {/* Grid background */}
         <div
-          className="absolute inset-0 opacity-30 pointer-events-none"
+          className="absolute inset-0 opacity-40 pointer-events-none"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(248,250,252,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(248,250,252,0.03) 1px, transparent 1px)',
+              'linear-gradient(rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.04) 1px, transparent 1px)',
             backgroundSize: '64px 64px',
           }}
         />
-        {/* Radial glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+        {/* Soft radial highlights */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-1/4 right-0 w-[400px] h-[400px] bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-6xl mx-auto px-6">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             {/* Left — copy */}
             <div className="flex-1 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent-amber/20 bg-accent-amber/5 text-xs font-mono text-accent-amber mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-xs font-mono text-amber-700 mb-6">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent-amber animate-pulse-amber" />
                 Real breach data · Live infrastructure · AI analysis
               </div>
@@ -440,7 +440,7 @@ export default function HomePage() {
                 <span
                   className="bg-clip-text text-transparent"
                   style={{
-                    backgroundImage: 'linear-gradient(135deg, #f59e0b 0%, #fb923c 50%, #f87171 100%)',
+                    backgroundImage: 'linear-gradient(135deg, #f59e0b 0%, #fb923c 50%, #ef4444 100%)',
                   }}
                 >
                   knows about
@@ -451,7 +451,7 @@ export default function HomePage() {
 
               <p className="text-lg text-text-secondary leading-relaxed max-w-xl mb-8 mx-auto lg:mx-0">
                 DataEcho runs a 3-layer intelligence audit — combining verified breach databases,
-                live infrastructure scanning, and Claude AI — to show you exactly what's publicly exposed about any company.
+                live infrastructure scanning, and Claude AI — to show you exactly what&apos;s publicly exposed about any company.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
@@ -476,7 +476,7 @@ export default function HomePage() {
                   { label: 'Instant results' },
                 ].map(({ label }) => (
                   <div key={label} className="flex items-center gap-1.5 text-xs text-text-muted">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                     {label}
                   </div>
                 ))}
@@ -495,7 +495,7 @@ export default function HomePage() {
       <StatsMarquee />
 
       {/* ── How it works ── */}
-      <section id="how-it-works" className="py-24 relative">
+      <section id="how-it-works" className="py-24 bg-white relative">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-xs font-mono text-accent-amber uppercase tracking-widest mb-3">How it works</p>
@@ -509,18 +509,18 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-3 gap-6 relative">
             {/* Connector line */}
-            <div className="hidden md:block absolute top-12 left-[calc(16.7%+1rem)] right-[calc(16.7%+1rem)] h-px bg-gradient-to-r from-amber-500/20 via-sky-500/20 to-green-500/20 pointer-events-none" />
+            <div className="hidden md:block absolute top-12 left-[calc(16.7%+1rem)] right-[calc(16.7%+1rem)] h-px bg-gradient-to-r from-amber-300/60 via-sky-300/60 to-emerald-300/60 pointer-events-none" />
 
             {STEPS.map((step, i) => {
               const Icon = step.icon
               return (
                 <div
                   key={i}
-                  className="relative rounded-2xl border border-[#111827] bg-[#0a0e1a] p-7 hover:border-[#1e293b] transition-all group"
+                  className="relative rounded-2xl border border-slate-200 bg-white p-7 hover:border-slate-300 hover:card-shadow transition-all group"
                 >
                   <div
                     className="h-12 w-12 rounded-xl flex items-center justify-center mb-5 transition-all group-hover:scale-110"
-                    style={{ backgroundColor: `${step.color}15`, border: `1px solid ${step.color}25` }}
+                    style={{ backgroundColor: `${step.color}15`, border: `1px solid ${step.color}30` }}
                   >
                     <Icon className="h-6 w-6" style={{ color: step.color }} />
                   </div>
@@ -540,7 +540,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Features ── */}
-      <section id="features" className="py-24 bg-[#0a0e1a] border-y border-[#111827]">
+      <section id="features" className="py-24 bg-slate-50 border-y border-slate-200">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-xs font-mono text-accent-amber uppercase tracking-widest mb-3">Intelligence layers</p>
@@ -558,12 +558,12 @@ export default function HomePage() {
               return (
                 <div
                   key={i}
-                  className="rounded-2xl border border-[#111827] bg-[#060a12] p-7 hover:border-[#1e293b] transition-all group"
+                  className="rounded-2xl border border-slate-200 bg-white p-7 hover:border-slate-300 hover:card-shadow transition-all group"
                 >
                   <div className="flex items-start gap-4 mb-5">
                     <div
                       className="h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110"
-                      style={{ backgroundColor: `${feature.color}12`, border: `1px solid ${feature.color}20` }}
+                      style={{ backgroundColor: `${feature.color}12`, border: `1px solid ${feature.color}25` }}
                     >
                       <Icon className="h-5 w-5" style={{ color: feature.color }} />
                     </div>
@@ -571,7 +571,7 @@ export default function HomePage() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-display text-lg font-bold text-text-primary">{feature.title}</h3>
                         {feature.badge && (
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-green-400/10 border border-green-400/20 text-green-400">
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
                             {feature.badge}
                           </span>
                         )}
@@ -583,10 +583,9 @@ export default function HomePage() {
                     {feature.items.map((item) => (
                       <span
                         key={item}
-                        className="text-xs font-mono px-2.5 py-1 rounded-lg border"
+                        className="text-xs font-mono px-2.5 py-1 rounded-lg border bg-slate-50"
                         style={{
-                          backgroundColor: `${feature.color}08`,
-                          borderColor: `${feature.color}20`,
+                          borderColor: `${feature.color}25`,
                           color: feature.color,
                         }}
                       >
@@ -600,15 +599,15 @@ export default function HomePage() {
           </div>
 
           {/* AI reasoning callout */}
-          <div className="mt-8 rounded-2xl border border-accent-amber/20 bg-accent-amber/5 p-6 flex flex-col md:flex-row items-center gap-5">
-            <div className="h-12 w-12 rounded-xl bg-accent-amber/10 border border-accent-amber/20 flex items-center justify-center flex-shrink-0">
+          <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 flex flex-col md:flex-row items-center gap-5">
+            <div className="h-12 w-12 rounded-xl bg-white border border-amber-200 flex items-center justify-center flex-shrink-0">
               <Brain className="h-6 w-6 text-accent-amber" />
             </div>
             <div>
               <h4 className="font-display font-bold text-text-primary mb-1">Claude AI synthesizes everything</h4>
               <p className="text-sm text-text-secondary">
                 Real data from HIBP, Shodan, GitHub, and crt.sh is fed as verified context to Claude.
-                The AI reasons over facts — it doesn't guess. HIBP breach records are never contradicted or fabricated.
+                The AI reasons over facts — it doesn&apos;t guess. HIBP breach records are never contradicted or fabricated.
               </p>
             </div>
             <Link href="/login" className="shrink-0">
@@ -621,7 +620,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Use cases ── */}
-      <section className="py-24">
+      <section className="py-24 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-xs font-mono text-accent-amber uppercase tracking-widest mb-3">Who uses DataEcho</p>
@@ -634,25 +633,25 @@ export default function HomePage() {
                 icon: Lock,
                 title: 'Security Teams',
                 description: 'Monitor your own company\'s public exposure. Get alerted to new breach records, subdomain sprawl, and CVEs on your infrastructure.',
-                color: '#f87171',
+                color: '#ef4444',
               },
               {
                 icon: Search,
                 title: 'Due Diligence',
                 description: 'Research vendors, partners, and acquisition targets. Understand their breach history and infrastructure posture before signing.',
-                color: '#38bdf8',
+                color: '#0ea5e9',
               },
               {
                 icon: AlertTriangle,
                 title: 'Competitive Intel',
                 description: 'Understand what AI models know about any competitor. See their public controversies, leadership profiles, and data incidents.',
-                color: '#a78bfa',
+                color: '#8b5cf6',
               },
             ].map(({ icon: Icon, title, description, color }) => (
-              <div key={title} className="rounded-2xl border border-[#111827] bg-[#0a0e1a] p-6 hover:border-[#1e293b] transition-all group">
+              <div key={title} className="rounded-2xl border border-slate-200 bg-white p-6 hover:border-slate-300 hover:card-shadow transition-all group">
                 <div
                   className="h-10 w-10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-all"
-                  style={{ backgroundColor: `${color}12`, border: `1px solid ${color}20` }}
+                  style={{ backgroundColor: `${color}12`, border: `1px solid ${color}25` }}
                 >
                   <Icon className="h-5 w-5" style={{ color }} />
                 </div>
@@ -665,7 +664,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Pricing ── */}
-      <section id="pricing" className="py-24 bg-[#0a0e1a] border-y border-[#111827]">
+      <section id="pricing" className="py-24 bg-slate-50 border-y border-slate-200">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-xs font-mono text-accent-amber uppercase tracking-widest mb-3">Pricing</p>
@@ -683,10 +682,13 @@ export default function HomePage() {
                 key={plan.name}
                 className={`relative rounded-2xl p-7 flex flex-col transition-all ${
                   plan.highlight
-                    ? 'border border-accent-amber/30 bg-gradient-to-b from-amber-500/5 to-transparent shadow-2xl shadow-amber-500/5'
-                    : 'border border-[#111827] bg-[#060a12] hover:border-[#1e293b]'
+                    ? 'border border-amber-300 bg-white shadow-xl shadow-amber-500/10'
+                    : 'border border-slate-200 bg-white hover:border-slate-300 hover:card-shadow'
                 }`}
               >
+                {plan.highlight && (
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-amber-50/60 to-transparent pointer-events-none" />
+                )}
                 {plan.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge variant="pro" className="text-xs px-3 py-0.5 shadow-lg">
@@ -695,7 +697,7 @@ export default function HomePage() {
                   </div>
                 )}
 
-                <div className="mb-6">
+                <div className="relative mb-6">
                   <p className="font-display text-sm font-semibold text-text-secondary mb-1">{plan.name}</p>
                   <div className="flex items-baseline gap-1 mb-2">
                     <span className="font-display text-4xl font-bold text-text-primary">{plan.price}</span>
@@ -704,23 +706,25 @@ export default function HomePage() {
                   <p className="text-xs text-text-muted">{plan.description}</p>
                 </div>
 
-                <ul className="space-y-2.5 mb-7 flex-1">
+                <ul className="relative space-y-2.5 mb-7 flex-1">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-center gap-2.5 text-sm text-text-secondary">
-                      <CheckCircle2 className="h-4 w-4 text-green-400 flex-shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                       {f}
                     </li>
                   ))}
                 </ul>
 
-                <Link href="/login" className="block">
-                  <Button
-                    variant={plan.ctaVariant}
-                    className={`w-full ${plan.highlight ? '' : ''}`}
-                  >
-                    {plan.cta}
-                  </Button>
-                </Link>
+                <div className="relative">
+                  <Link href="/login" className="block">
+                    <Button
+                      variant={plan.ctaVariant}
+                      className="w-full"
+                    >
+                      {plan.cta}
+                    </Button>
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
@@ -728,12 +732,12 @@ export default function HomePage() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="py-28 relative overflow-hidden">
+      <section className="py-28 bg-white relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-amber-500/8 rounded-full blur-3xl animate-glow-breathe" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-amber-500/6 rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-3xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent-amber/20 bg-accent-amber/5 text-xs font-mono text-accent-amber mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-xs font-mono text-amber-700 mb-6">
             <span className="h-1.5 w-1.5 rounded-full bg-accent-amber animate-pulse-amber" />
             Free forever · No credit card
           </div>
@@ -767,18 +771,18 @@ export default function HomePage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-[#111827] bg-[#060a12]">
+      <footer className="border-t border-slate-200 bg-slate-50">
         <div className="max-w-6xl mx-auto px-6 py-12">
           <div className="grid md:grid-cols-4 gap-10 mb-10">
             <div>
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="h-8 w-8 rounded-lg bg-accent-amber/10 border border-accent-amber/20 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center">
                   <span className="font-display text-sm font-bold text-accent-amber">D</span>
                 </div>
                 <span className="font-display text-lg font-bold text-text-primary">DataEcho</span>
               </div>
               <p className="text-sm text-text-muted leading-relaxed">
-                AI-powered data transparency audits. See what's publicly exposed about any company.
+                AI-powered data transparency audits. See what&apos;s publicly exposed about any company.
               </p>
             </div>
 
@@ -823,7 +827,7 @@ export default function HomePage() {
             ))}
           </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-[#111827] gap-4">
+          <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-slate-200 gap-4">
             <p className="text-xs text-text-muted font-mono">
               © {new Date().getFullYear()} DataEcho. All rights reserved.
             </p>
