@@ -1,0 +1,8 @@
+# T2 — boosted jump: stand, jump onto a 2.5 m platform.
+base: task_drop.yaml
+task:
+  name: boosted_jump
+  platform_height: 2.5           # [m]
+  platform_size: [1.5, 1.5]      # [m] x, y extent
+  platform_distance: 1.5         # [m] horizontal distance from start to platform centre
+  episode_time: 5.0

@@ -1,0 +1,177 @@
+# Mobility suit — default physical configuration. ALL physical parameters live here.
+# Frame conventions (every body): x forward, y left, z up in the nominal standing pose.
+# Each body frame origin sits at its proximal joint. Positions are metres in the parent/body frame.
+# Thruster `dir` is the unit direction of the FORCE applied to the body (opposite to the exhaust).
+
+sim:
+  timestep: 0.001          # physics dt [s]
+  control_dt: 0.002        # control loop period [s] (500 Hz)
+  episode_time: 5.0        # episode cap [s]
+  gravity: 9.81            # [m/s^2], applied along -z world
+  ground_friction: 1.0
+  air_density: 1.225       # [kg/m^3]
+  drag_cd: 1.0
+  drag_area: 0.7           # [m^2]
+
+human:
+  mass: 91.0               # [kg]
+  height: 1.80             # [m]
+  # Segment mass fractions of human mass (de Leva / Winter); must sum to 1.0.
+  mass_frac:
+    pelvis: 0.142
+    torso: 0.355
+    head: 0.081
+    upper_arm_l: 0.028
+    upper_arm_r: 0.028
+    lower_arm_l: 0.016
+    lower_arm_r: 0.016
+    hand_l: 0.006
+    hand_r: 0.006
+    thigh_l: 0.100
+    thigh_r: 0.100
+    shin_l: 0.0465
+    shin_r: 0.0465
+    foot_l: 0.0145
+    foot_r: 0.0145
+  # Kinematic skeleton: body -> parent and joint-origin position in the parent frame.
+  # Standing: pelvis origin (hip centre line) at z = 1.00 world.
+  skeleton:
+    pelvis:      {parent: world,       pos: [0.0, 0.0, 1.00]}
+    torso:       {parent: pelvis,      pos: [0.0, 0.0, 0.10]}
+    head:        {parent: torso,       pos: [0.0, 0.0, 0.50]}
+    upper_arm_l: {parent: torso,       pos: [0.0, 0.19, 0.42]}
+    upper_arm_r: {parent: torso,       pos: [0.0, -0.19, 0.42]}
+    lower_arm_l: {parent: upper_arm_l, pos: [0.0, 0.0, -0.30]}
+    lower_arm_r: {parent: upper_arm_r, pos: [0.0, 0.0, -0.30]}
+    hand_l:      {parent: lower_arm_l, pos: [0.0, 0.0, -0.26]}
+    hand_r:      {parent: lower_arm_r, pos: [0.0, 0.0, -0.26]}
+    thigh_l:     {parent: pelvis,      pos: [0.0, 0.09, -0.05]}
+    thigh_r:     {parent: pelvis,      pos: [0.0, -0.09, -0.05]}
+    shin_l:      {parent: thigh_l,     pos: [0.0, 0.0, -0.44]}
+    shin_r:      {parent: thigh_r,     pos: [0.0, 0.0, -0.44]}
+    foot_l:      {parent: shin_l,      pos: [0.0, 0.0, -0.43]}
+    foot_r:      {parent: shin_r,      pos: [0.0, 0.0, -0.43]}
+  # Geometry, joints (ranges, stiffness/damping, posture servos) are owned by the model
+  # workstream and are added below under `human.geometry` / `human.joints`.
+
+suit:
+  # 9 kg total suit mass. Each entry: list of (body, mass_kg, local pos). Spread items split evenly.
+  masses:
+    hip_pods:     {total: 3.0, bodies: [pelvis]}                      # pods + fans + tanks on hips/back
+    tube_frame:   {total: 1.5, bodies: [torso, thigh_l, thigh_r, shin_l, shin_r, upper_arm_l, upper_arm_r, lower_arm_l, lower_arm_r]}
+    airbags:      {total: 1.5, bodies: [torso]}
+    compute:      {total: 1.0, bodies: [torso]}
+    shell:        {total: 2.0, bodies: [pelvis, torso, thigh_l, thigh_r, shin_l, shin_r, upper_arm_l, upper_arm_r]}
+
+  airbags:
+    # Compliant contact padding, disabled until deployed. Shapes are deployed sizes.
+    collar: {body: torso,  type: capsule, pos: [0.0, 0.0, 0.47], size: [0.09, 0.16], euler: [90, 0, 0]}
+    chest:  {body: torso,  type: ellipsoid, pos: [0.13, 0.0, 0.28], size: [0.10, 0.18, 0.20]}
+    hips:   {body: pelvis, type: capsule, pos: [-0.10, 0.0, 0.0], size: [0.12, 0.17], euler: [90, 0, 0]}
+    solref: [0.06, 1.0]    # soft contact (timeconst, dampratio)
+    solimp: [0.5, 0.95, 0.05]
+    deploy_time: 0.03      # [s] inflation time
+
+  actuator_classes:
+    lift_pod:  {f_max: 1500.0, tau: 0.005, budget: impulse_gas_pods, alloc_lambda: 1.0e-2}
+    fan:       {f_max: 300.0,  tau: 0.100, budget: battery,          alloc_lambda: 3.0e-2}
+    micro_jet: {f_max: 40.0,   tau: 0.005, budget: impulse_gas_jets, alloc_lambda: 1.0e-4}
+
+  budgets:
+    impulse_gas_pods: 2500.0   # [N*s] shared by both lift pods
+    impulse_gas_jets: 600.0    # [N*s] shared by all 40 micro jets
+    battery_wh: 150.0          # [Wh] fans
+    fan_peak_power_w: 1200.0   # [W] each, at f_max  -> P = k f^1.5, k = 1200 / 300^1.5
+
+  # 44 thrusters. name -> class, body, pos (body frame), dir (force direction, body frame).
+  thrusters:
+    pod_l:              {cls: lift_pod,  body: pelvis,      pos: [0.00,  0.20,  0.05], dir: [0, 0, 1]}
+    pod_r:              {cls: lift_pod,  body: pelvis,      pos: [0.00, -0.20,  0.05], dir: [0, 0, 1]}
+    fan_l:              {cls: fan,       body: pelvis,      pos: [-0.15,  0.12, 0.10], dir: [0, 0, 1]}
+    fan_r:              {cls: fan,       body: pelvis,      pos: [-0.15, -0.12, 0.10], dir: [0, 0, 1]}
+    # shoulders (torso)
+    jet_shoulder_l_fwd: {cls: micro_jet, body: torso,       pos: [-0.08,  0.22, 0.44], dir: [1, 0, 0]}
+    jet_shoulder_l_back: {cls: micro_jet, body: torso,      pos: [0.08,  0.22, 0.44], dir: [-1, 0, 0]}
+    jet_shoulder_l_up:  {cls: micro_jet, body: torso,       pos: [0.00,  0.24, 0.40], dir: [0, 0, 1]}
+    jet_shoulder_r_fwd: {cls: micro_jet, body: torso,       pos: [-0.08, -0.22, 0.44], dir: [1, 0, 0]}
+    jet_shoulder_r_back: {cls: micro_jet, body: torso,      pos: [0.08, -0.22, 0.44], dir: [-1, 0, 0]}
+    jet_shoulder_r_up:  {cls: micro_jet, body: torso,       pos: [0.00, -0.24, 0.40], dir: [0, 0, 1]}
+    # upper arms
+    jet_uparm_l_fwd:    {cls: micro_jet, body: upper_arm_l, pos: [-0.05,  0.03, -0.12], dir: [1, 0, 0]}
+    jet_uparm_l_back:   {cls: micro_jet, body: upper_arm_l, pos: [0.05,  0.03, -0.12], dir: [-1, 0, 0]}
+    jet_uparm_r_fwd:    {cls: micro_jet, body: upper_arm_r, pos: [-0.05, -0.03, -0.12], dir: [1, 0, 0]}
+    jet_uparm_r_back:   {cls: micro_jet, body: upper_arm_r, pos: [0.05, -0.03, -0.12], dir: [-1, 0, 0]}
+    # wrists (distal forearm)
+    jet_wrist_l_up:     {cls: micro_jet, body: lower_arm_l, pos: [0.00,  0.00, -0.24], dir: [0, 0, 1]}
+    jet_wrist_l_fwd:    {cls: micro_jet, body: lower_arm_l, pos: [-0.04, 0.00, -0.22], dir: [1, 0, 0]}
+    jet_wrist_l_back:   {cls: micro_jet, body: lower_arm_l, pos: [0.04,  0.00, -0.22], dir: [-1, 0, 0]}
+    jet_wrist_r_up:     {cls: micro_jet, body: lower_arm_r, pos: [0.00,  0.00, -0.24], dir: [0, 0, 1]}
+    jet_wrist_r_fwd:    {cls: micro_jet, body: lower_arm_r, pos: [-0.04, 0.00, -0.22], dir: [1, 0, 0]}
+    jet_wrist_r_back:   {cls: micro_jet, body: lower_arm_r, pos: [0.04,  0.00, -0.22], dir: [-1, 0, 0]}
+    # upper back (torso)
+    jet_upback_l_fwd:   {cls: micro_jet, body: torso,       pos: [-0.13,  0.10, 0.32], dir: [1, 0, 0]}
+    jet_upback_l_up:    {cls: micro_jet, body: torso,       pos: [-0.13,  0.10, 0.36], dir: [0, 0, 1]}
+    jet_upback_l_side:  {cls: micro_jet, body: torso,       pos: [-0.11,  0.15, 0.32], dir: [0, -1, 0]}
+    jet_upback_r_fwd:   {cls: micro_jet, body: torso,       pos: [-0.13, -0.10, 0.32], dir: [1, 0, 0]}
+    jet_upback_r_up:    {cls: micro_jet, body: torso,       pos: [-0.13, -0.10, 0.36], dir: [0, 0, 1]}
+    jet_upback_r_side:  {cls: micro_jet, body: torso,       pos: [-0.11, -0.15, 0.32], dir: [0, 1, 0]}
+    # lower back (torso, lumbar)
+    jet_lowback_l_fwd:  {cls: micro_jet, body: torso,       pos: [-0.12,  0.10, 0.05], dir: [1, 0, 0]}
+    jet_lowback_l_up:   {cls: micro_jet, body: torso,       pos: [-0.12,  0.10, 0.08], dir: [0, 0, 1]}
+    jet_lowback_r_fwd:  {cls: micro_jet, body: torso,       pos: [-0.12, -0.10, 0.05], dir: [1, 0, 0]}
+    jet_lowback_r_up:   {cls: micro_jet, body: torso,       pos: [-0.12, -0.10, 0.08], dir: [0, 0, 1]}
+    # thighs
+    jet_thigh_l_fwd:    {cls: micro_jet, body: thigh_l,     pos: [-0.08,  0.00, -0.20], dir: [1, 0, 0]}
+    jet_thigh_l_back:   {cls: micro_jet, body: thigh_l,     pos: [0.08,  0.00, -0.20], dir: [-1, 0, 0]}
+    jet_thigh_l_side:   {cls: micro_jet, body: thigh_l,     pos: [0.00,  0.08, -0.20], dir: [0, -1, 0]}
+    jet_thigh_r_fwd:    {cls: micro_jet, body: thigh_r,     pos: [-0.08,  0.00, -0.20], dir: [1, 0, 0]}
+    jet_thigh_r_back:   {cls: micro_jet, body: thigh_r,     pos: [0.08,  0.00, -0.20], dir: [-1, 0, 0]}
+    jet_thigh_r_side:   {cls: micro_jet, body: thigh_r,     pos: [0.00, -0.08, -0.20], dir: [0, 1, 0]}
+    # calves
+    jet_calf_l_fwd:     {cls: micro_jet, body: shin_l,      pos: [-0.06,  0.00, -0.18], dir: [1, 0, 0]}
+    jet_calf_l_back:    {cls: micro_jet, body: shin_l,      pos: [0.05,  0.00, -0.18], dir: [-1, 0, 0]}
+    jet_calf_r_fwd:     {cls: micro_jet, body: shin_r,      pos: [-0.06,  0.00, -0.18], dir: [1, 0, 0]}
+    jet_calf_r_back:    {cls: micro_jet, body: shin_r,      pos: [0.05,  0.00, -0.18], dir: [-1, 0, 0]}
+    # heels
+    jet_heel_l_up:      {cls: micro_jet, body: foot_l,      pos: [-0.05,  0.00, -0.05], dir: [0, 0, 1]}
+    jet_heel_l_fwd:     {cls: micro_jet, body: foot_l,      pos: [-0.07,  0.00, -0.04], dir: [1, 0, 0]}
+    jet_heel_r_up:      {cls: micro_jet, body: foot_r,      pos: [-0.05,  0.00, -0.05], dir: [0, 0, 1]}
+    jet_heel_r_fwd:     {cls: micro_jet, body: foot_r,      pos: [-0.07,  0.00, -0.04], dir: [1, 0, 0]}
+
+sensors:
+  imu:
+    segments: all              # one IMU per body segment (15)
+    accel_noise: 0.05          # [m/s^2] std
+    gyro_noise: 0.01           # [rad/s] std
+    delay: 0.002               # [s]
+  altimeter:
+    body: pelvis
+    pos: [0.0, 0.0, -0.05]
+    dir: [0, 0, -1]            # body frame
+    noise_frac: 0.02           # std as fraction of range
+    delay: 0.005
+    max_range: 30.0
+  foot_pressure:
+    noise_frac: 0.05
+    delay: 0.001
+  joint_encoders:              # needed for kinematics (limb poses for allocation)
+    noise: 0.002               # [rad] std
+    delay: 0.001
+  thruster_telemetry:
+    noise: 0.0
+    delay: 0.0
+
+estimation:
+  # The suit aligns its attitude/velocity before the fall (standing or at the drop rig);
+  # the estimator is seeded with the true initial state corrupted by these errors.
+  init_attitude_err_deg: 2.0
+  init_velocity_err: 0.05      # [m/s]
+  init_height_err: 0.05        # [m]
+  altimeter_gain: 0.2          # complementary-filter blend for height/vertical velocity
+  freefall_accel_thresh: 2.0   # [m/s^2] |specific force| below this => free fall
+  freefall_min_time: 0.05      # [s]
+
+emg:
+  enabled: false               # Phase-4 stub
+
+seed: 0

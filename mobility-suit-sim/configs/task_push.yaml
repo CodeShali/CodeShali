@@ -1,0 +1,12 @@
+# T3 — push recovery on a 0.3 m wide beam.
+base: task_drop.yaml
+task:
+  name: push_recovery
+  beam_width: 0.3                # [m]
+  beam_height: 1.0               # [m] beam top above ground
+  beam_length: 6.0
+  push_force: 200.0              # [N]
+  push_duration: 0.2             # [s]
+  push_time: [0.5, 1.5]          # [s] sampled
+  push_body: torso
+  episode_time: 4.0

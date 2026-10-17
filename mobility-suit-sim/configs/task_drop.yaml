@@ -1,0 +1,41 @@
+# T1 — drop landing from 1–5 m at random body orientation.
+base: suit_default.yaml
+task:
+  name: drop_landing
+  drop_height: [1.0, 5.0]        # [m] feet-to-ground at release (sampled uniform)
+  initial_tilt_deg: 30.0         # max tilt magnitude (random axis in the horizontal plane)
+  initial_yaw_deg: 180.0
+  initial_angvel: 2.0            # [rad/s] per-axis uniform +-
+  initial_linvel: 0.0
+  fixed: null                    # e.g. {drop_height: 3.0, tilt_deg: 0.0, angvel: 0.0} for M4 smoke test
+  settle_time: 0.5               # [s] after first foot contact before the episode ends
+safe_landing:
+  max_vertical_speed: 2.0        # [m/s]
+  max_horizontal_speed: 1.0      # [m/s]
+  max_tilt_deg: 20.0
+baseline:
+  attitude_kp: 400.0             # [N*m/rad]
+  attitude_kd: 120.0             # [N*m*s/rad]
+  target_speed: 1.5              # [m/s] at target_height
+  target_height: 0.3             # [m] (feet above ground)
+  brake_decel_max: 15.0          # [m/s^2] planning deceleration for the braking profile
+  velocity_kp: 8.0               # [1/s] vertical velocity tracking gain
+  horizontal_kp: 2.0             # [1/s] horizontal velocity damping gain
+  airbag_speed: 2.5              # [m/s] deploy airbags if impact speed predicted above this
+  cutoff_height: 0.05            # [m] cut thrust at touchdown
+reward:
+  safe_bonus: 10.0
+  k1_impact_speed2: 0.5
+  k2_tilt: 2.0                   # per rad
+  k3_impulse: 0.002              # per N*s
+  bad_contact_penalty: 50.0
+residual:
+  max_force: [300.0, 300.0, 600.0]   # [N] residual wrench scale
+  max_torque: [60.0, 60.0, 30.0]     # [N*m]
+randomization:
+  enabled: true
+  human_mass_frac: 0.10
+  thruster_force_frac: 0.15
+  response_delay_frac: 0.50
+  sensor_noise_scale: [0.5, 2.0]
+  ground_friction: [0.5, 1.0]

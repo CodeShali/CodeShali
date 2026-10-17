@@ -1,0 +1,6 @@
+__pycache__/
+*.egg-info/
+runs/
+.pytest_cache/
+*.mp4
+!reports/**/*.mp4
