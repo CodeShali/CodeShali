@@ -223,6 +223,7 @@ sensors:
     delay: 0.001
   joint_encoders:              # needed for kinematics (limb poses for allocation)
     noise: 0.002               # [rad] std
+    vel_noise: 0.02            # [rad/s] std
     delay: 0.001
   thruster_telemetry:
     noise: 0.0
@@ -237,6 +238,18 @@ estimation:
   altimeter_gain: 0.2          # complementary-filter blend for height/vertical velocity
   freefall_accel_thresh: 2.0   # [m/s^2] |specific force| below this => free fall
   freefall_min_time: 0.05      # [s]
+  foot_contact_threshold: 20.0 # [N]
+  height_filter: kf            # kf | complementary
+  accel_process_noise: 0.5     # [m/s^2]
+  attitude_gain: 2.0           # [1/s] gravity-direction correction when quasi-static
+  zupt_gain: 2.0               # [1/s] horizontal velocity decay when standing
+  static_accel_tol: 0.4        # [m/s^2]
+  static_gyro_tol: 0.3         # [rad/s]
+  altimeter_max_incidence_deg: 60.0
+  altimeter_gate_sigma: 5.0
+  altimeter_reacquire_time: 0.1  # [s]
+  kinematic_height_noise: 0.01   # [m]
+  attitude_err_corr: 100.0
 
 emg:
   enabled: false               # Phase-4 stub
