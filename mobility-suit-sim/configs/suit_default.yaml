@@ -53,6 +53,73 @@ human:
     foot_r:      {parent: shin_r,      pos: [0.0, 0.0, -0.43]}
   # Geometry, joints (ranges, stiffness/damping, posture servos) are owned by the model
   # workstream and are added below under `human.geometry` / `human.joints`.
+  # ---- Model workstream (suitsim/model) -------------------------------------------------
+  # Collision/inertia geometry per segment (body frame). Keys without _l/_r apply to both sides.
+  # Each segment has exactly ONE primary geom carrying its human mass (uniform density).
+  # capsule: fromto [x1 y1 z1 x2 y2 z2] + size [radius]; box: pos + size [half x,y,z]; sphere: pos + size [r]
+  geometry:
+    pelvis:    {type: capsule, fromto: [0.0, -0.10, 0.02, 0.0, 0.10, 0.02], size: [0.11]}
+    torso:     {type: box,     pos: [0.0, 0.0, 0.25], size: [0.11, 0.17, 0.24]}
+    head:      {type: sphere,  pos: [0.0, 0.0, 0.10], size: [0.10]}
+    upper_arm: {type: capsule, fromto: [0.0, 0.0, -0.03, 0.0, 0.0, -0.27], size: [0.045]}
+    lower_arm: {type: capsule, fromto: [0.0, 0.0, -0.03, 0.0, 0.0, -0.23], size: [0.04]}
+    hand:      {type: capsule, fromto: [0.0, 0.0, -0.02, 0.0, 0.0, -0.12], size: [0.035]}
+    thigh:     {type: capsule, fromto: [0.0, 0.0, -0.04, 0.0, 0.0, -0.40], size: [0.07]}
+    shin:      {type: capsule, fromto: [0.0, 0.0, -0.03, 0.0, 0.0, -0.39], size: [0.05]}
+    foot:      {type: box,     pos: [0.07, 0.0, -0.05], size: [0.13, 0.05, 0.03]}   # sole at z = -0.08
+    sole_site_margin: [0.005, 0.005, 0.015]   # touch-site box = sole face grown by this (half sizes) [m]
+    suit_mass_radius: 0.02                    # radius of the point-like suit-mass geoms [m]
+  contact:
+    body_contype: 1          # body geoms: collide with ground, never with each other
+    body_conaffinity: 2
+    ground_contype: 2
+    ground_conaffinity: 1
+    ground_priority: 1       # ground friction governs every ground contact
+    condim: 3
+  # Hinge joints, in qpos order. axis in the child body frame; positive = named motion
+  # (flex = forward/flexion, abd = away from midline, rot = internal, inv = inversion).
+  # range [deg]; kp [N*m/rad], kv [N*m*s/rad] of the posture servo; forcerange [N*m] servo torque limit.
+  # damping [N*m*s/rad] is passive (not torque-limited): leg values absorb landing energy.
+  joints:
+    defaults: {damping: 1.0, armature: 0.05, frictionloss: 0.0}
+    dofs:
+      lumbar_pitch:     {body: torso,       axis: [0, 1, 0],  range: [-30, 50],  kp: 800,  kv: 40, forcerange: 400}
+      lumbar_roll:      {body: torso,       axis: [1, 0, 0],  range: [-30, 30],  kp: 800,  kv: 40, forcerange: 400}
+      lumbar_yaw:       {body: torso,       axis: [0, 0, 1],  range: [-35, 35],  kp: 600,  kv: 30, forcerange: 300}
+      neck_pitch:       {body: head,        axis: [0, 1, 0],  range: [-50, 60],  kp: 150,  kv: 8,  forcerange: 60}
+      shoulder_l_flex:  {body: upper_arm_l, axis: [0, -1, 0], range: [-50, 170], kp: 150,  kv: 8,  forcerange: 120}
+      shoulder_l_abd:   {body: upper_arm_l, axis: [1, 0, 0],  range: [-20, 170], kp: 150,  kv: 8,  forcerange: 120}
+      elbow_l_flex:     {body: lower_arm_l, axis: [0, -1, 0], range: [0, 145],   kp: 80,   kv: 4,  forcerange: 80}
+      shoulder_r_flex:  {body: upper_arm_r, axis: [0, -1, 0], range: [-50, 170], kp: 150,  kv: 8,  forcerange: 120}
+      shoulder_r_abd:   {body: upper_arm_r, axis: [-1, 0, 0], range: [-20, 170], kp: 150,  kv: 8,  forcerange: 120}
+      elbow_r_flex:     {body: lower_arm_r, axis: [0, -1, 0], range: [0, 145],   kp: 80,   kv: 4,  forcerange: 80}
+      hip_l_flex:       {body: thigh_l,     axis: [0, -1, 0], range: [-20, 120], kp: 1200, kv: 60, forcerange: 400, armature: 0.1, damping: 20}
+      hip_l_abd:        {body: thigh_l,     axis: [1, 0, 0],  range: [-30, 45],  kp: 1000, kv: 50, forcerange: 400, armature: 0.1}
+      hip_l_rot:        {body: thigh_l,     axis: [0, 0, -1], range: [-40, 40],  kp: 400,  kv: 20, forcerange: 200, armature: 0.1}
+      knee_l_flex:      {body: shin_l,      axis: [0, 1, 0],  range: [0, 140],   kp: 1200, kv: 60, forcerange: 400, armature: 0.1, damping: 20}
+      ankle_l_flex:     {body: foot_l,      axis: [0, -1, 0], range: [-45, 25],  kp: 1200, kv: 40, forcerange: 300, armature: 0.1, damping: 10}
+      ankle_l_inv:      {body: foot_l,      axis: [-1, 0, 0], range: [-20, 30],  kp: 600,  kv: 20, forcerange: 200, armature: 0.1}
+      hip_r_flex:       {body: thigh_r,     axis: [0, -1, 0], range: [-20, 120], kp: 1200, kv: 60, forcerange: 400, armature: 0.1, damping: 20}
+      hip_r_abd:        {body: thigh_r,     axis: [-1, 0, 0], range: [-30, 45],  kp: 1000, kv: 50, forcerange: 400, armature: 0.1}
+      hip_r_rot:        {body: thigh_r,     axis: [0, 0, 1],  range: [-40, 40],  kp: 400,  kv: 20, forcerange: 200, armature: 0.1}
+      knee_r_flex:      {body: shin_r,      axis: [0, 1, 0],  range: [0, 140],   kp: 1200, kv: 60, forcerange: 400, armature: 0.1, damping: 20}
+      ankle_r_flex:     {body: foot_r,      axis: [0, -1, 0], range: [-45, 25],  kp: 1200, kv: 40, forcerange: 300, armature: 0.1, damping: 10}
+      ankle_r_inv:      {body: foot_r,      axis: [1, 0, 0],  range: [-20, 30],  kp: 600,  kv: 20, forcerange: 200, armature: 0.1}
+  # Nominal landing-ready posture held by the servos [deg] (unlisted joints: 0).
+  posture:
+    lumbar_pitch: 5.0
+    shoulder_l_flex: 15.0
+    shoulder_r_flex: 15.0
+    shoulder_l_abd: 10.0
+    shoulder_r_abd: 10.0
+    elbow_l_flex: 25.0
+    elbow_r_flex: 25.0
+    hip_l_flex: 10.0
+    hip_r_flex: 10.0
+    knee_l_flex: 20.0
+    knee_r_flex: 20.0
+    ankle_l_flex: 10.0
+    ankle_r_flex: 10.0
 
 suit:
   # 9 kg total suit mass. Each entry: list of (body, mass_kg, local pos). Spread items split evenly.
@@ -75,7 +142,7 @@ suit:
   actuator_classes:
     lift_pod:  {f_max: 1500.0, tau: 0.005, budget: impulse_gas_pods, alloc_lambda: 1.0e-2}
     fan:       {f_max: 300.0,  tau: 0.100, budget: battery,          alloc_lambda: 3.0e-2}
-    micro_jet: {f_max: 40.0,   tau: 0.005, budget: impulse_gas_jets, alloc_lambda: 1.0e-4}
+    micro_jet: {f_max: 40.0,   tau: 0.005, budget: impulse_gas_jets, alloc_lambda: 1.0e-1}
 
   budgets:
     impulse_gas_pods: 2500.0   # [N*s] shared by both lift pods
