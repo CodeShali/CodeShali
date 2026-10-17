@@ -14,14 +14,55 @@ safe_landing:
   max_horizontal_speed: 1.0      # [m/s]
   max_tilt_deg: 20.0
 baseline:
-  attitude_kp: 400.0             # [N*m/rad]
-  attitude_kd: 120.0             # [N*m*s/rad]
-  target_speed: 1.5              # [m/s] at target_height
+  # ---- feed-forward model (nominal; truth is randomised) ----
+  mass_nominal: 100.0            # [kg]
+  inertia_nominal: [19.0, 18.0, 1.75]   # [kg m^2] body x/y/z about CoM, nominal posture
+  # ---- fall detection ----
+  fall_vz_thresh: 0.4            # [m/s] fallback: est. descent faster than this, no foot contact
+  # ---- attitude (thrust axis -> desired axis; yaw rate damped) ----
+  attitude_kp: [2600.0, 2400.0]  # [N*m/rad] roll, pitch (linear region)
+  attitude_kd: [380.0, 360.0]    # [N*m*s/rad]
+  attitude_alpha_max: [8.0, 8.0] # [rad/s^2] sqrt-law planning angular acceleration
+  torque_max: [300.0, 250.0, 70.0]   # [N*m] per body axis
+  torque_feasible_clip: false    # clip roll torque to roll_jet_authority + pod_arm * thrust
+                                 # (tested: worse - the allocator's extra thrust on saturated
+                                 #  roll requests is what rights the body quickly)
+  yaw_rate_kd: 15.0              # [N*m*s/rad]
+  yaw_align: false               # yaw so the roll/pitch demand lies on the strong pitch axis
+  yaw_align_min_deg: 8.0         # active while thrust-axis tilt error exceeds this
+  yaw_align_kp: 8.0              # [1/s]
+  yaw_align_alpha: 20.0          # [rad/s^2]
+  yaw_align_kd: 20.0             # [N*m*s/rad]
+  roll_jet_authority: 40.0       # [N*m] roll torque available from jets alone
+  pod_arm: 0.2                   # [m] pod lateral lever arm
+  assist_thrust_max: 1200.0      # [N] pod thrust allowed purely for roll authority
+  # ---- vertical braking profile ----
+  target_speed: 1.2              # [m/s] at target_height
   target_height: 0.3             # [m] (feet above ground)
-  brake_decel_max: 15.0          # [m/s^2] planning deceleration for the braking profile
+  brake_decel_max: 9.0           # [m/s^2] planning deceleration for the braking profile
   velocity_kp: 8.0               # [1/s] vertical velocity tracking gain
+  velocity_ki: 0.0               # [1/s^2]
+  integral_max: 3.0              # [m/s^2]
+  accel_cmd_max: 20.0            # [m/s^2] commanded vertical accel cap
+  thrust_max: 3000.0             # [N]
+  thrust_tilt_full_deg: 25.0     # braking thrust faded out between these thrust-axis tilts
+  thrust_tilt_cut_deg: 70.0
+  thrust_horizontal_weight: 1.0  # w_h/w_z: thrust magnitude = WLS fit of T*z_thrust to F_des
+  assist_horizontal_accel_max: 100.0  # [m/s^2] horizontal accel tolerated from roll-assist thrust
+  # ---- horizontal ----
   horizontal_kp: 2.0             # [1/s] horizontal velocity damping gain
+  horizontal_accel_max: 3.0      # [m/s^2]
+  jet_horizontal_gain: 0.0       # fraction of the horizontal force not delivered by tilted thrust
+                                 # that is requested from the micro jets directly
+  jet_horizontal_force_max: 300.0    # [N]
+  horizontal_in_attitude: true   # desired axis tilts against v_xy also before braking
+  tilt_cmd_max_deg: 10.0         # commanded thrust-axis tilt limit
+  near_ground_height: 0.6        # [m]
+  tilt_cmd_max_near_deg: 10.0    # tilt limit below near_ground_height
+  # ---- touchdown ----
   airbag_speed: 2.5              # [m/s] deploy airbags if impact speed predicted above this
+  airbag_check_height: 0.5       # [m] predict impact below this feet height
+  airbag_tilt_deg: 45.0          # deploy if this tilted near the ground
   cutoff_height: 0.05            # [m] cut thrust at touchdown
 reward:
   safe_bonus: 10.0

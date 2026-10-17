@@ -251,6 +251,11 @@ estimation:
   kinematic_height_noise: 0.01   # [m]
   attitude_err_corr: 100.0
 
+allocation:
+  solver: active_set           # 'active_set' (warm-started exact QP, suitsim.control.fast_allocation)
+                               # | 'bvls' (scipy lsq_linear, reference). Same optimum.
+  torque_length: 0.3           # [m] torque-row weighting length (Allocator default)
+
 emg:
   enabled: false               # Phase-4 stub
 
