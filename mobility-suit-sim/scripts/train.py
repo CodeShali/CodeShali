@@ -189,8 +189,12 @@ def make_callbacks(args, tcfg, task_cfg, out: Path, venv):
             self.eval_time = 0.0
             self.csv_path = out / "eval.csv"
             self.ref = None
+            self.last_eval_ts = None
 
         def _on_training_start(self) -> None:
+            ts0 = self.model.num_timesteps        # > 0 when warm-starting (--init-from)
+            self.next_eval = ts0 + eval_freq
+            self.next_ckpt = ts0 + ckpt_freq
             if eval_freq > 0 and tcfg.get("eval_baseline", True):
                 t = time.perf_counter()
                 self.ref = run_eval(task_cfg, None, eval_seeds, workers)
@@ -228,6 +232,7 @@ def make_callbacks(args, tcfg, task_cfg, out: Path, venv):
             self.ep = []
 
         def evaluate(self, ts: int) -> dict:
+            self.last_eval_ts = ts
             t = time.perf_counter()
             d = _save(self.model, venv, out / "eval_tmp")
             st = run_eval(task_cfg, str(d), eval_seeds, workers)
@@ -270,7 +275,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--eval-freq", type=int, default=None, help="timesteps between evals (0=off)")
     ap.add_argument("--eval-episodes", type=int, default=None)
     ap.add_argument("--init-from", default=None,
-                    help="warm-start from a model.zip (+ vecnormalize.pkl next to it)")
+                    help="warm-start from a model.zip (+ vecnormalize.pkl next to it); "
+                         "--total-timesteps then counts additional steps")
     ap.add_argument("--set", action="append", default=[], metavar="KEY=VAL",
                     help="task config override, e.g. --set reward.k3_impulse=0.004")
     ap.add_argument("--train-set", action="append", default=[], metavar="KEY=VAL",
@@ -342,11 +348,12 @@ def main(argv: list[str] | None = None) -> int:
                 reset_num_timesteps=not args.init_from)
     wall = time.perf_counter() - t0
     _save(model, venv, out)
-    if int(tcfg.get("eval_freq", 0) or 0) > 0 and tcfg.get("final_eval", True):
+    train_wall = max(wall - cb.eval_time, 1e-9)
+    if (int(tcfg.get("eval_freq", 0) or 0) > 0 and tcfg.get("final_eval", True)
+            and cb.last_eval_ts != model.num_timesteps):
         cb.evaluate(model.num_timesteps)
     venv.close()
 
-    train_wall = max(wall - cb.eval_time, 1e-9)
     fps = total / train_wall
     timing = {"total_timesteps": total, "n_envs": n_envs, "wall_s": wall,
               "eval_wall_s": cb.eval_time, "train_wall_s": train_wall,

@@ -1,0 +1,17 @@
+{
+  "timesteps": 850000,
+  "wall_s": 3134.4,
+  "score": 86.27506871072238,
+  "episodes": 50,
+  "success_rate": 1.0,
+  "n_fail": 0,
+  "impulse_pods": 1053.7622950023826,
+  "impulse_jets": 318.7308339253794,
+  "impulse_total": 1372.493128927762,
+  "impact_v_vertical": 1.7480350723100897,
+  "impact_v_horizontal": 0.3065739483034685,
+  "tilt_at_impact_deg": 7.023382233450906,
+  "episode_return": 3.3363784407763455,
+  "n_errors": 0,
+  "failures": "{}"
+}

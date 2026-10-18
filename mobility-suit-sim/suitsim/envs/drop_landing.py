@@ -146,6 +146,17 @@ class DropLandingEnv(SuitEnvBase):
         r -= float(rw.get("k3_impulse", 0.0)) * (info["impulse_gas_pods"] + info["impulse_gas_jets"])
         if info["bad_contact"] or info["first_contact"] == "none":
             r -= float(rw.get("bad_contact_penalty", 50.0))
+        # optional safety-margin shaping (default 0): quadratic penalty once an impact
+        # quantity comes within `margin_*` of its safe-landing limit (keeps an RL policy that
+        # trades impact speed for gas away from the success cliff)
+        k_m = float(rw.get("k_margin", 0.0))
+        if k_m and np.isfinite(vv):
+            mv, mh = float(rw.get("margin_v", 0.3)), float(rw.get("margin_h", 0.3))
+            mt = float(rw.get("margin_tilt_deg", 5.0))
+            ev = max(0.0, vv - (self.lim_v - mv)) / max(mv, 1e-9)
+            eh = max(0.0, vh - (self.lim_h - mh)) / max(mh, 1e-9)
+            et = max(0.0, info["tilt_at_impact_deg"] - (self.lim_tilt - mt)) / max(mt, 1e-9)
+            r -= k_m * (ev * ev + eh * eh + et * et)
         return r
 
     def reset(self, *, seed=None, options=None):

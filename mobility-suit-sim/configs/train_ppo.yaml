@@ -1,9 +1,11 @@
 # PPO residual-policy training (M5): scripts/train.py --config configs/train_ppo.yaml [--quick]
 task_config: task_drop.yaml
 seed: 0
-# Spec target (16 envs, 20M steps). On the 4-core dev container one env runs ~80 steps/s,
-# 4 envs ~250-300 steps/s => 20M steps ~ 20 h at 4 envs; see <run>/timing.json for the
-# measured projection.  Use --quick or --total-timesteps / --n-envs on small machines.
+# Spec target (16 envs, 20M steps). Measured on the shared 4-core dev container (M5):
+# 4 envs ~130-150 steps/s (SubprocVecEnv, envs ~50 % busy) = 11-13 min per 100k steps
+# => 20M steps ~ 37-43 h at 4 envs (~9-11 h on a 16-core box assuming linear scaling).
+# Every run writes <run>/timing.json with its own projection.  Use --quick or
+# --total-timesteps / --n-envs on small machines.
 n_envs: 16
 total_timesteps: 20000000
 quick:                           # --quick: laptop CPU
@@ -23,8 +25,8 @@ ppo:
   vf_coef: 0.5
   max_grad_norm: 0.5
   policy_hidden: [128, 128]
-  log_std_init: -2.0             # std 0.135 -> +-40 N / +-80 N / 8 N*m exploration: the
-                                 # residual starts as a small perturbation of the baseline
+  log_std_init: -1.2             # std 0.30 (per 20 ms step; averaged by the plant). -2.0
+                                 # (std 0.135) learned ~3x slower in the 200k quick run
 action_init_scale: 0.0           # action-head weights scaled by this at init (0 => a == 0)
 normalize:
   obs: true                      # VecNormalize obs (stats saved as vecnormalize.pkl)
@@ -33,8 +35,13 @@ normalize:
 # task-config overrides used for training only (eval/evaluate.py uses the task config as is)
 task_overrides:
   reward:
-    shaping_impulse: 0.002       # dense per-step gas penalty [1/(N*s)] (credit assignment);
-    k3_impulse: 0.0              # ... replaces the equal terminal one (same episode total)
+    shaping_impulse: 0.004       # dense per-step gas penalty [1/(N*s)] (credit assignment);
+    k3_impulse: 0.0              # ... replaces the terminal one
+    k1_impact_speed2: 0.1        # 0.5 makes any extra impact speed cost more than the gas saved
+    k_margin: 5.0                # quadratic penalty within margin_v/h/tilt of the safe limits
+    margin_v: 0.3                # (keeps the faster-landing policy off the 2 m/s cliff)
+    margin_h: 0.3
+    margin_tilt_deg: 5.0
 policy_dt: 0.02                  # [s] residual policy acts at 50 Hz (held between control steps)
 eval_freq: 100000                # timesteps between periodic deterministic evals (0 = off)
 eval_episodes: 50
