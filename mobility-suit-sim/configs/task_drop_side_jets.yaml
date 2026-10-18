@@ -1,0 +1,10 @@
+# T1 drop landing with the side-jet suit variant (configs/suit_variant_side_jets.yaml):
+# +4 lateral micro jets (48 thrusters). The `base:` chain is single-parent, so the 4 jets are
+# repeated here verbatim — keep in sync with suit_variant_side_jets.yaml.
+base: task_drop.yaml
+suit:
+  thrusters:
+    jet_shoulder_l_side: {cls: micro_jet, body: torso, pos: [0.00,  0.24, 0.44], dir: [0, -1, 0]}
+    jet_shoulder_r_side: {cls: micro_jet, body: torso, pos: [0.00, -0.24, 0.44], dir: [0, 1, 0]}
+    jet_hip_l_side:      {cls: micro_jet, body: pelvis, pos: [0.00,  0.15, 0.00], dir: [0, -1, 0]}
+    jet_hip_r_side:      {cls: micro_jet, body: pelvis, pos: [0.00, -0.15, 0.00], dir: [0, 1, 0]}

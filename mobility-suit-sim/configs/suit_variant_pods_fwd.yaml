@@ -1,0 +1,8 @@
+# Variant: both lift pods moved 3.6 cm forward so their thrust line passes (nominally) through
+# the whole-body CoM. In the default suit the pods sit ~3.6 cm behind the CoM, so every newton
+# of pod thrust makes a nose-up pitch torque the micro jets have to cancel (jet gas).
+base: suit_default.yaml
+suit:
+  thrusters:
+    pod_l: {cls: lift_pod, body: pelvis, pos: [0.036,  0.20, 0.05], dir: [0, 0, 1]}
+    pod_r: {cls: lift_pod, body: pelvis, pos: [0.036, -0.20, 0.05], dir: [0, 0, 1]}

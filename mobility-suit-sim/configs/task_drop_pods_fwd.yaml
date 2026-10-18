@@ -1,0 +1,7 @@
+# T1 drop landing with the pods-forward suit variant (configs/suit_variant_pods_fwd.yaml).
+# Single-parent `base:` chain, so the pod entries are repeated here — keep in sync.
+base: task_drop.yaml
+suit:
+  thrusters:
+    pod_l: {cls: lift_pod, body: pelvis, pos: [0.036,  0.20, 0.05], dir: [0, 0, 1]}
+    pod_r: {cls: lift_pod, body: pelvis, pos: [0.036, -0.20, 0.05], dir: [0, 0, 1]}

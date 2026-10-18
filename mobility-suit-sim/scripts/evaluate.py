@@ -61,6 +61,30 @@ def build_parser() -> argparse.ArgumentParser:
     return ap
 
 
+def rank_key(cfg: dict, limits: dict):
+    """Sort key (higher = better) for the worst/best video pick.
+
+    Landing tasks use :func:`suitsim.eval.metrics.episode_score` (impact speed / tilt).
+    Push recovery never 'lands' (impact speeds are 0 and tilt_at_impact is constant), so
+    ties would fall back to seed order; rank it by the end state instead: final torso tilt,
+    lateral CoM offset relative to the half beam width and jet gas used.
+    """
+    from suitsim.eval.metrics import episode_score
+    task = (cfg.get("task") or {})
+    if task.get("name") != "push_recovery":
+        return lambda r: episode_score(r, limits)
+    max_tilt = float((cfg.get("push_success") or {}).get("max_tilt_deg", 30.0))
+    half_w = 0.5 * float(task.get("beam_width", 0.3))
+    jets_cap = float(((cfg.get("suit") or {}).get("budgets") or {}).get("impulse_gas_jets", 600.0))
+
+    def key(r: dict):
+        bad = (abs(float(r.get("final_tilt_deg") or 0.0)) / max_tilt
+               + abs(float(r.get("final_com_offset_y") or 0.0)) / half_w
+               + float(r.get("impulse_gas_jets") or 0.0) / jets_cap)
+        return (int(bool(r.get("success"))), int(bool(r.get("safe"))), -bad)
+    return key
+
+
 def render_ranked(spec: EnvSpec, ranked: list[tuple[str, int, dict]], out_dir: Path,
                   width: int, height: int, fps: float | None, plumes: bool, cfg: dict,
                   shadows: bool = True) -> list:
@@ -138,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.videos > 0:
         ok = [r for r in results if "error" not in r]
-        worst, best = worst_best(ok, k=args.videos, limits=summary["limits"])
+        worst, best = worst_best(ok, k=args.videos, key=rank_key(cfg, summary["limits"]))
         ranked = [("worst", i, r) for i, r in enumerate(worst)] + \
                  [("best", i, r) for i, r in enumerate(best)]
         print(f"[evaluate] rendering {len(ranked)} videos", flush=True)
