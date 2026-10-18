@@ -41,6 +41,15 @@ from typing import Any
 # suitsim.viz.gl.ensure_gl() before mujoco).
 _GL_LOCKED_OUT = "mujoco" in sys.modules and not os.environ.get("MUJOCO_GL")
 os.environ.setdefault("MUJOCO_GL", "osmesa")
+# osmesa (llvmpipe) and triton bundle clashing LLVM symbols: importing triton AFTER mujoco has
+# loaded libOSMesa segfaults (this happens when SB3/torch builds an optimizer -> torch._dynamo
+# -> triton, e.g. loading a residual policy in an eval worker). Loading triton first is safe
+# (~0.1 s); skipped when triton is absent or mujoco is already imported.
+if os.environ.get("MUJOCO_GL") == "osmesa" and "mujoco" not in sys.modules:
+    try:
+        import triton  # noqa: F401
+    except Exception:
+        pass
 
 import gymnasium as gym  # noqa: E402
 import mujoco  # noqa: E402
@@ -221,6 +230,11 @@ class SuitEnvBase(gym.Env):
         return np.clip(np.nan_to_num(o), -c, c).astype(np.float32)
 
     # ------------------------------------------------------------------ gym API
+    @property
+    def dt(self) -> float:
+        """Wall-clock duration of one env step (one policy step) [s]."""
+        return self.n_ctrl * self.n_phys * self.dt_phys
+
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
         ss = np.random.SeedSequence(int(self.np_random.integers(2 ** 63)))

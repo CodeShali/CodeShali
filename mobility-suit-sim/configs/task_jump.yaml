@@ -40,8 +40,10 @@ randomization:                   # same as T1 (mass, thrust, delay, sensor noise
 # Baseline jump controller (suitsim.control.jump). Attitude gains / braking profile defaults
 # come from `baseline:` (inherited from task_drop.yaml) unless overridden here.
 jump:
-  mission_knows_platform: false  # true: controller gets the episode's true platform position
-  settle_time: 0.10              # [s] standing still before the crouch (estimator settles)
+  mission_knows_platform: true   # true: controller gets the episode's true platform position
+  settle_time: 0.80              # [s] standing still before the crouch (the estimator's
+                                 #     quasi-static tilt correction removes the initial
+                                 #     attitude error; during the boost 1 deg ~ 0.5 m/s^2)
   crouch_time: 0.35              # [s] ramp to the crouch posture
   crouch_hold: 0.10              # [s]
   crouch_posture:                # [deg] (unlisted joints: nominal posture)
@@ -59,11 +61,20 @@ jump:
     knee_r_flex: 2.0
     ankle_l_flex: -20.0
     ankle_r_flex: -20.0
+    lumbar_pitch: -10.0          # torso back: CoM on the pod thrust line (no pitch torque)
   leg_push: true
-  flight_posture_delay: 0.08     # [s] after lift-off -> back to the nominal (landing) posture
+  flight_posture_delay: 0.08     # [s] after lift-off -> flight / landing posture
+  flight_posture:                # [deg] nominal posture overrides (CoM ~ on the pod axis)
+    lumbar_pitch: -5.0
+  landing_posture_height: 0.6    # [m] soles above the top (and over it) -> landing posture
+  landing_posture: {}            # [deg] overrides of the nominal (landing-ready) posture
+  near_height: 0.6               # [m] below this (over the platform) the thrust-axis lean ...
+  tilt_cmd_max_near_deg: 3.0     # ... is limited to this (touch down upright)
+  flight_attitude_scale: 0.25    # attitude torque scale while no lift thrust (saves jet gas)
+  flight_accel_max: 2.5          # [m/s^2] horizontal accel in ballistic flight (jets only)
   boost_thrust: 2900.0           # [N] vertical boost force request
   boost_ramp: 0.03               # [s]
-  apex_clearance: 0.40           # [m] planned apex of the soles above the platform top
+  apex_clearance: 0.60           # [m] planned apex of the soles above the platform top
   apex_drag_margin: 0.03         # [m] extra apex for drag / thrust tail-off
   # horizontal guidance (x toward the platform, y to its centre line)
   target_offset_x: 0.0           # [m] landing CoM target relative to the platform centre
@@ -76,6 +87,14 @@ jump:
   edge_margin_x: 0.15            # [m] keep the toes this far behind the near edge ...
   edge_margin_z: 0.15            # [m] ... until the soles are this far above the top
   over_margin: 0.10              # [m] heels this far past the near edge = "over the platform"
+  touchdown_speed_gain: 1.5      # [1/s] over the platform: |v_xy| <= gain * (h_rel - h0) ...
+  touchdown_speed_h0: 0.1        # [m]    ... so the feet arrive (nearly) at rest
+  edge_fix: true                 # position fix when the estimator adopts the platform top
+  velocity_bias_fix: true        # ... and horizontal velocity-bias fix (bias ~ dx / (t - t_boost))
+  velocity_bias_max: 0.5         # [m/s]
+  altimeter_offset_x: -0.02      # [m] altimeter ahead of the CoM (flight posture)
+  altimeter_offset_z: -0.10      # [m] altimeter above the CoM
+  altimeter_reacquire_time: 0.1  # [s] = estimation.altimeter_reacquire_time
   # vertical (descent onto the platform; braking profile relative to the platform top)
   target_speed: 0.9              # [m/s] at target_height above the platform
   target_height: 0.25            # [m]

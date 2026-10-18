@@ -121,6 +121,11 @@ class BoostedJumpEnv(SuitEnvBase):
         self._servo = {n: int(a) for n, a in zip(self.info_m["joint_names"],
                                                  self.info_m["servo_ids"]) if a >= 0}
 
+    @property
+    def dt(self) -> float:
+        """Env step [s] (gym convention; the video recorder uses it for real-time playback)."""
+        return self.policy_dt
+
     # ------------------------------------------------------------------ episode
     def _sample_episode(self, rng: np.random.Generator) -> dict:
         task = self.cfg["task"]
@@ -253,7 +258,8 @@ class BoostedJumpEnv(SuitEnvBase):
             mujoco.mj_subtreeVel(m, d)
             vel = d.subtree_linvel[self.root_id].copy()
             self.plat_foot_first = {"v": vel, "tilt": self._truth_tilt(), "t": t,
-                                    "body": self.body_names[min(feet_top)]}
+                                    "body": self.body_names[min(feet_top)],
+                                    "com": d.subtree_com[self.root_id].copy()}
 
     # ------------------------------------------------------------------ termination / info
     def _done(self) -> bool:
@@ -334,6 +340,10 @@ class BoostedJumpEnv(SuitEnvBase):
                 "stayed_on_platform": stayed,
                 "ground_after_liftoff": bool(self.ground_after_liftoff),
                 "platform_side_hit": bool(self.side_hit),
+                "landing_com_x_rel": (float(pf["com"][0] - self.platform_xy[0])
+                                      if pf is not None else float("nan")),
+                "landing_com_y_rel": (float(pf["com"][1] - self.platform_xy[1])
+                                      if pf is not None else float("nan")),
                 "final_com_x_rel": float(com[0] - self.platform_xy[0]),
                 "final_com_y_rel": float(com[1] - self.platform_xy[1]),
                 "failure_reasons": reasons}

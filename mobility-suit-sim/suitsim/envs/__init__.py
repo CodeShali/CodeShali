@@ -12,6 +12,8 @@ from suitsim.envs.drop_landing import DropLandingEnv
 from suitsim.envs.boosted_jump import BoostedJumpEnv
 
 _REGISTRY = {"drop_landing": DropLandingEnv, "boosted_jump": BoostedJumpEnv}
+from suitsim.envs.push_recovery import PushRecoveryEnv  # noqa: E402  (T3)
+_REGISTRY["push_recovery"] = PushRecoveryEnv
 _RESERVED = ("boosted_jump", "push_recovery")
 
 

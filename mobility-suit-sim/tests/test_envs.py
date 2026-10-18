@@ -53,8 +53,17 @@ def test_registry_and_spaces(cfg):
     assert env.n_ctrl == 10 and env.n_phys == 2
     assert env.unwrapped.model is not None and env.unwrapped.data is not None
     assert hasattr(env.unwrapped, "thrusters")
-    with pytest.raises(NotImplementedError):
-        make_env("boosted_jump", cfg)
+    # T2 / T3 envs are registered by their workstreams; each must construct from its own
+    # task config (push_recovery tolerated as still reserved)
+    from suitsim.envs import _REGISTRY
+    for task, task_cfg in (("boosted_jump", "task_jump.yaml"), ("push_recovery", "task_push.yaml")):
+        if task in _REGISTRY:
+            e = make_env(task, load_config(task_cfg), controller="none")
+            assert hasattr(e.unwrapped, "thrusters")
+            e.close()
+        else:
+            with pytest.raises(NotImplementedError):
+                make_env(task, cfg)
     with pytest.raises(KeyError):
         make_env("nope", cfg)
     with pytest.raises(ValueError):

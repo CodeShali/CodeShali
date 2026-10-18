@@ -52,6 +52,22 @@ _JUMP_DEFAULTS = {
     "push_posture": {},
     "leg_push": True,
     "flight_posture_delay": 0.08,
+    "flight_posture": {},
+    "flight_accel_max": 2.5,
+    "boost_lean": False,
+    "touchdown_speed_gain": 1.5,
+    "touchdown_speed_h0": 0.1,
+    "edge_fix": True,
+    "flight_attitude_scale": 1.0,
+    "velocity_bias_fix": True,
+    "velocity_bias_max": 0.5,
+    "altimeter_offset_x": -0.02,
+    "altimeter_offset_z": -0.10,
+    "altimeter_reacquire_time": 0.1,
+    "landing_posture_height": 0.6,
+    "landing_posture": {},
+    "near_height": 0.6,
+    "tilt_cmd_max_near_deg": 3.0,
     "boost_thrust": 2900.0,
     "boost_ramp": 0.03,
     "apex_clearance": 0.40,
@@ -119,7 +135,12 @@ class BaselineJumpController:
 
         self.crouch = full(p["crouch_posture"])
         self.push = full(p["push_posture"]) if p["leg_push"] else dict(self.crouch)
+        self.flight_post = full(p["flight_posture"])
+        self.landing_post = full(p["landing_posture"])
+        self.sin_near = math.sin(math.radians(float(p["tilt_cmd_max_near_deg"])))
         self.sin_tilt = math.sin(math.radians(float(p["tilt_cmd_max_deg"])))
+        self.alt_delay = float(((cfg.get("sensors", {}) or {}).get("altimeter", {}) or {})
+                               .get("delay", 0.0))
         self.reset()
 
     # ------------------------------------------------------------------------------------
@@ -142,6 +163,13 @@ class BaselineJumpController:
         self.t_air: float | None = None
         self.braking = False
         self.last_geometry = None
+        self.surface = 0
+        self.edge_fixed = False
+        self.edge_dx = 0.0
+        self.hist: list = []
+        self.v_bias = np.zeros(2)
+        self.t_boost0: float | None = None
+        self.t_boost_mid: float | None = None
 
     # ------------------------------------------------------------------------------------
     def thrust_axis(self, est: dict) -> np.ndarray:
@@ -190,11 +218,44 @@ class BaselineJumpController:
             return
         self.z += float(est["com_vel"][2]) * dt
         cands = (hc, hc + self.H)
-        c = min(cands, key=lambda v: abs(v - self.z))
+        k = int(abs(cands[1] - self.z) < abs(cands[0] - self.z))
+        c = cands[k]
         if abs(c - self.z) < float(p["alt_gate"]):
             self.z += min(float(p["alt_gain"]) * dt, 1.0) * (c - self.z)
+            if k == 1 and self.surface == 0 and self.phase in ("flight", "descent", "boost") \
+                    and p["edge_fix"] and not self.edge_fixed:
+                self._edge_fix(float(est["t"]))
+            self.surface = k
 
-    def _horizontal(self, v: np.ndarray, feet: float, vz_pred: float) -> np.ndarray:
+    def _edge_fix(self, t: float) -> None:
+        """The estimator adopted the platform top: the altimeter ray crossed the near edge
+        ``altimeter_reacquire_time`` (+ altimeter delay) ago -> horizontal position fix."""
+        p = self.p
+        tc = t - float(p["altimeter_reacquire_time"]) - self.alt_delay
+        hist = [h for h in self.hist if h[0] <= tc]
+        if not hist:
+            return
+        _, xh, zh, zp = hist[-1]
+        if zp[2] < 0.5 or zh <= self.H:
+            return
+        s = (zh - self.H) / zp[2]                      # ray length down to the top plane
+        x_alt = self.platform_xy[0] - self.size[0] / 2 + s * zp[0]
+        x_meas = x_alt - float(p["altimeter_offset_x"])
+        dx = x_meas - xh
+        if abs(dx) < 0.8:
+            self.x[0] += dx
+            self.edge_fixed = True
+            self.edge_dx = dx
+            if p["velocity_bias_fix"] and self.t_boost_mid is not None:
+                # the velocity error is accumulated mainly during the boost (attitude error x
+                # boost acceleration) -> constant afterwards: dx = bias * (t_c - t_mid)
+                bias = dx / max(tc - self.t_boost_mid, 0.2)
+                lim = float(p["velocity_bias_max"])
+                self.v_bias[0] = float(np.clip(bias, -lim, lim))
+                self.x[0] += self.v_bias[0] * (t - tc)
+
+    def _horizontal(self, v: np.ndarray, feet: float, vz_pred: float,
+                    amax: float | None = None) -> np.ndarray:
         """Desired horizontal acceleration (world xy)."""
         p = self.p
         tgt = self.platform_xy + np.array([float(p["target_offset_x"]), 0.0])
@@ -215,9 +276,16 @@ class BaselineJumpController:
                 t_clear = (vz_pred - math.sqrt(disc)) / self.g
                 cap = max(room, 0.0) / max(t_clear, 1e-3)
             v_des[0] = min(v_des[0], cap)
+        if self.phase == "descent" and self._over_platform():
+            # arrive (nearly) at rest: horizontal speed limited by the remaining height
+            h_rel = feet - self.H
+            vcap = float(p["touchdown_speed_gain"]) * max(h_rel - float(p["touchdown_speed_h0"]), 0.0)
+            n = np.linalg.norm(v_des)
+            if n > vcap:
+                v_des *= vcap / max(n, 1e-9)
         a = float(p["horizontal_kv"]) * (v_des - v[:2])
         n = np.linalg.norm(a)
-        amax = float(p["horizontal_accel_max"])
+        amax = float(p["horizontal_accel_max"]) if amax is None else amax
         if n > amax:
             a *= amax / n
         return a
@@ -240,7 +308,8 @@ class BaselineJumpController:
             self.t_phase = t
         dt = 0.0 if self.t_prev is None else max(t - self.t_prev, 0.0)
         self.t_prev = t
-        v = np.asarray(est["com_vel"], float)
+        v = np.asarray(est["com_vel"], float).copy()
+        v[:2] += self.v_bias
         contact = bool(np.any(est["foot_contact"]))
         self._altitude(est, dt)
         self.offset = float(est["com_height"]) - float(est["feet_height"])
@@ -264,16 +333,24 @@ class BaselineJumpController:
             return ControlOutput(wrench=zero, phase="crouch", debug={**dbg, "joint_targets": jt})
 
         zp = self.thrust_axis(est)
+        self.hist.append((t, self.x[0], self.z + float(p["altimeter_offset_z"]), zp.copy()))
+        if len(self.hist) > 150:
+            del self.hist[:50]
         if self.phase in ("boost", "flight", "descent") and self.t_air is None \
                 and not contact and feet > 0.03:
             self.t_air = t
         airborne = self.t_air is not None
         if airborne and t - self.t_air >= float(p["flight_posture_delay"]):
-            jt = dict(self.nominal)
+            jt = dict(self.flight_post)
         elif self.phase == "boost":
             jt = dict(self.push)
         else:
-            jt = dict(self.nominal)
+            jt = dict(self.flight_post)
+        h_rel0 = feet - self.H
+        if self.phase in ("descent", "landed") and (
+                self.phase == "landed" or (h_rel0 < float(p["landing_posture_height"])
+                                           and self._over_platform())):
+            jt = dict(self.landing_post)
         dbg["joint_targets"] = jt
 
         if self.phase == "landed":
@@ -295,14 +372,15 @@ class BaselineJumpController:
         # predicted vertical speed at the end of the boost (for the edge-clearance cap)
         vz_pred = math.sqrt(max(2.0 * g * (apex_tgt - feet), 0.0)) if self.phase == "boost" \
             else v[2]
-        a_xy = self._horizontal(v, feet, vz_pred) if airborne or self.phase != "boost" \
-            else np.zeros(2)
+        a_xy = self._horizontal(v, feet, vz_pred, float(p["flight_accel_max"])
+                                if self.phase == "flight" else None) \
+            if airborne or self.phase != "boost" else np.zeros(2)
 
         if self.phase == "boost":
             ramp = min(tp / max(float(p["boost_ramp"]), 1e-6), 1.0)
             Fz = ramp * float(p["boost_thrust"])
-            z_des = np.array([0.0, 0.0, 1.0])
             F = np.array([m * a_xy[0], m * a_xy[1], Fz])
+            z_des = self._lean(F) if p["boost_lean"] else np.array([0.0, 0.0, 1.0])
         elif self.phase == "flight":
             z_des = np.array([0.0, 0.0, 1.0])
             F = np.array([m * a_xy[0], m * a_xy[1], 0.0])
@@ -322,20 +400,32 @@ class BaselineJumpController:
                 Fz = 0.0
             F = np.array([m * a_xy[0], m * a_xy[1], Fz])
             dbg["v_ref"] = vr
-            if Fz > 1e-6:
-                lean = F[:2] / Fz
-                n = np.linalg.norm(lean)
-                if n > self.sin_tilt:
-                    lean *= self.sin_tilt / n
-                z_des = np.array([lean[0], lean[1], 1.0])
-                z_des /= np.linalg.norm(z_des)
-            else:
-                z_des = np.array([0.0, 0.0, 1.0])
+            near = h_rel < float(p["near_height"]) and over
+            z_des = self._lean(F, self.sin_near if near else None)
         tau = self.attitude_torque(est, zp, z_des)
-        dbg.update({"Fz": Fz, "a_xy": a_xy.tolist(), "apex_pred": apex, "h_rel": h_rel,
+        if Fz <= 1e-6 and self.phase in ("flight", "descent"):
+            tau *= float(p["flight_attitude_scale"])      # no lift: loose attitude hold
+        dbg.update({"edge_dx": self.edge_dx, "Fz": Fz, "a_xy": a_xy.tolist(), "apex_pred": apex, "h_rel": h_rel,
                     "over": over})
         return ControlOutput(wrench=np.concatenate([F, tau]), phase=self.phase, debug=dbg)
 
+    def _lean(self, F: np.ndarray, sin_max: float | None = None) -> np.ndarray:
+        """Desired thrust axis: toward F, tilt limited to tilt_cmd_max_deg."""
+        if F[2] <= 1e-6:
+            return np.array([0.0, 0.0, 1.0])
+        lean = F[:2] / F[2]
+        n = np.linalg.norm(lean)
+        sm = self.sin_tilt if sin_max is None else sin_max
+        tmax = sm / math.sqrt(max(1.0 - sm ** 2, 1e-9))
+        if n > tmax:
+            lean = lean * (tmax / n)
+        z = np.array([lean[0], lean[1], 1.0])
+        return z / np.linalg.norm(z)
+
     def _goto(self, phase: str, t: float) -> None:
+        if phase == "boost":
+            self.t_boost0 = t
+        elif phase == "flight" and self.t_boost0 is not None:
+            self.t_boost_mid = 0.5 * (self.t_boost0 + t)
         self.phase = phase
         self.t_phase = t
