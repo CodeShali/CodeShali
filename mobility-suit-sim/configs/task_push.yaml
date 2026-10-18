@@ -29,7 +29,16 @@ push_success:
   # any contact of a non-foot body with the beam / ground also counts as a fall (ends)
 balance:
   mass_nominal: 100.0            # [kg]
-  com_height_nominal: 1.0        # [m] CoM above the soles (LIPM omega0 = sqrt(g/h))
+  com_height_nominal: 1.0        # [m] fallback CoM height above the soles (LIPM w0 = sqrt(g/h))
+  cop_margin: [0.04, 0.03]       # [m] (x, y) feet carry the CMP inside polygon shrunk by this;
+                                 # the rest goes to the thrusters (0.07: +35 % jet gas)
+  k_xi: 3.0                      # [1/s] capture-point convergence rate
+  gain_u: [1.5, 1.5]             # thruster accel multiplier
+  u_max: [6.0, 6.0]              # [m/s^2] cap of the requested thruster accel
+  w_att: 0.0                     # torso-attitude rows in the allocation (0.15: +75 % jet gas)
+  w_fz: 0.25                     # collective-lift row weight (pods used when jets saturate)
+  lift_max: 600.0                # [N] collective lift cap
+  hip_strategy_gain: [0.0, 0.0]  # posture-servo hip strategy (not needed with thrusters)
 reward:
   success_bonus: 10.0
   fall_penalty: 10.0

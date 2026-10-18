@@ -61,7 +61,7 @@ _DEFAULTS = {
     "com_height_nominal": 1.0,      # [m] fallback CoM height above the soles
     "foot_half_length": None,       # [m] default: human.geometry.foot.size[0]
     "foot_half_width": None,        # [m] default: human.geometry.foot.size[1]
-    "cop_margin": [0.07, 0.07],     # [m] (x, y) support polygon shrink for the feet's share
+    "cop_margin": [0.04, 0.03],     # [m] (x, y) support polygon shrink for the feet's share
     "k_xi": 3.0,                    # [1/s] capture-point convergence rate
     "gain_u": [1.5, 1.5],           # thruster accel multiplier (x, y)
     "u_max": [6.0, 6.0],            # [m/s^2] cap of the requested thruster accel
@@ -74,7 +74,7 @@ _DEFAULTS = {
     "w_u": 1.0,                     # row weights
     "w_fz": 0.25,
     "w_yaw": 1.0,
-    "w_att": 0.15,
+    "w_att": 0.0,                    # >0 tested worse: torso PD rows make jets fight (+75 % gas)
     "yaw_rate_kd": 15.0,            # [N m s/rad]
     "att_kp": 300.0,                # [N m/rad] weak torso attitude PD (target: initial tilt)
     "att_kd": 60.0,
@@ -219,8 +219,7 @@ class BalanceController:
         c, v = self.c_f, self.v_f
 
         # support polygon (support frame, relative to the support centre)
-        sole_s = np.array([Rs @ (-(r[:2] - c_w[:2])) for r in rel])  # sole centres
-        # (sole_k - centre) = c_w - rel_k
+        # sole centres relative to the support centre: (sole_k - centre) = c_w - rel_k
         sole_s = np.array([Rs @ (c_w[:2] - r[:2]) for r in rel])
         lo = np.min(sole_s[loaded] - [self.foot_hl, self.foot_hw], axis=0)
         hi = np.max(sole_s[loaded] + [self.foot_hl, self.foot_hw], axis=0)
