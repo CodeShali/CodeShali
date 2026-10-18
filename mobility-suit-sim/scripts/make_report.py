@@ -47,19 +47,24 @@ EVALS = {
     "t1_side_jets": ("eval_t1_side_jets", "T1 drop — side-jet suit (200 eps)"),
     "t1_pods_fwd": ("eval_t1_pods_fwd", "T1 drop — pods 3.6 cm forward (200 eps)"),
 }
+FALLBACK = {"t3_push": "eval_t3"}
+DIRS: dict[str, Path] = {}
 # evaluations whose 5 worst + 5 best videos are copied into reports/videos/<name>/
 VIDEO_EVALS = ["t1_baseline", "t1_residual", "t2_jump", "t3_push", "t3_push_side_jets",
                "t3_500N_default", "t3_500N_side_jets"]
 
 # Acceptance targets (project spec). T2's >= 90 % is also quoted in configs/task_jump.yaml.
-TARGETS = {"T1": 0.95, "T2": 0.90, "T3": 0.90}
+TARGETS = {"T1": 0.95, "T2": 0.90, "T3": 0.95}
 
 
 # --------------------------------------------------------------------------------------
 def load(name: str) -> tuple[dict, list[dict]] | None:
     d = RUNS / EVALS[name][0]
+    if not (d / "summary.json").exists() and name in FALLBACK:
+        d = RUNS / FALLBACK[name]          # older run of the same evaluation
     if not (d / "summary.json").exists():
         return None
+    DIRS[name] = d
     s = json.loads((d / "summary.json").read_text())
     res = [json.loads(line) for line in open(d / "results.jsonl")]
     return s, res
@@ -86,6 +91,19 @@ def paired(a: list[dict], b: list[dict], key) -> dict:
     return {"n": len(seeds), "mean_a": xa.mean(), "mean_b": xa.mean() + d.mean(),
             "diff": d.mean(), "ci": 1.96 * d.std(ddof=1) / math.sqrt(len(d)),
             "rel": d.mean() / xa.mean()}
+
+
+def num(x: float) -> str:
+    ax = abs(x)
+    if ax >= 100:
+        return f"{x:.0f}"
+    if ax >= 1:
+        return f"{x:.2f}"
+    return f"{x:.3g}"
+
+
+def snum(x: float) -> str:
+    return ("+" if x >= 0 else "") + num(x)
 
 
 def total_impulse(r):
@@ -121,7 +139,7 @@ def copy_figures(data: dict) -> dict[str, list[Path]]:
     for name in ("t1_baseline", "t1_residual", "t2_jump", "t3_push", "t3_push_side_jets"):
         if name not in data:
             continue
-        src = RUNS / EVALS[name][0] / "plots"
+        src = DIRS[name] / "plots"
         out[name] = []
         for p in sorted(src.glob("*.png")):
             dst = FIG / f"{name}_{p.name}"
@@ -136,7 +154,7 @@ def copy_videos(data: dict) -> dict[str, list[dict]]:
         if name not in data:
             continue
         s, _ = data[name]
-        src = RUNS / EVALS[name][0] / "videos"
+        src = DIRS[name] / "videos"
         dst = VID / name
         if dst.exists():
             shutil.rmtree(dst)
@@ -159,7 +177,7 @@ def video_table(rows: list[dict], res: list[dict]) -> str:
         rel = v["path"].relative_to(REPORT)
         p = r.get("episode_params", {})
         if "drop_height" in p:
-            det = (f"h {p['drop_height']:.2f} m, tilt {p['tilt_deg']:.0f}°, |ω| {p['angvel']:.2f} "
+            det = (f"h {p['drop_height']:.2f} m, tilt {p['tilt_deg']:.0f}°, spin {p['angvel']:.2f} "
                    f"rad/s; vz {abs(r.get('impact_v_vertical', 0)):.2f}, vh "
                    f"{abs(r.get('impact_v_horizontal', 0)):.2f} m/s, tilt@impact "
                    f"{r.get('tilt_at_impact_deg', 0):.1f}°")
@@ -205,7 +223,7 @@ def plot_training_curve(path: Path) -> Path | None:
     ax.set_xlabel("PPO timesteps [k]")
     ax.set_ylabel("total gas impulse (pods + jets) [N·s]")
     ax.set_title("Mean impulse, 50 held-out eval episodes")
-    ax.legend(fontsize=8, frameon=False)
+    ax.legend(fontsize=8, frameon=False, loc="lower left")
     ax.spines[["top", "right"]].set_visible(False)
     ax = axes[1]
     ax.plot(b[0] / 1e3, 100 * b[2], "o-", color="C0", label="ppo_t1_b")
@@ -232,8 +250,8 @@ def plot_compare_impulse(a: list[dict], b: list[dict], path: Path, la: str, lb: 
                                      ("impact_v_vertical", "|vertical impact speed| [m/s]")]):
         va = np.abs([r[key] for r in a]); vb = np.abs([r[key] for r in b])
         bins = np.linspace(min(va.min(), vb.min()), max(va.max(), vb.max()), 40)
-        ax.hist(va, bins=bins, alpha=0.6, label=f"{la} (mean {va.mean():.3g})", color="C0")
-        ax.hist(vb, bins=bins, alpha=0.6, label=f"{lb} (mean {vb.mean():.3g})", color="C1")
+        ax.hist(va, bins=bins, alpha=0.6, label=f"{la} (mean {num(va.mean())})", color="C0")
+        ax.hist(vb, bins=bins, alpha=0.6, label=f"{lb} (mean {num(vb.mean())})", color="C1")
         ax.set_xlabel(lab); ax.set_ylabel("episodes")
         ax.legend(fontsize=8, frameon=False)
         ax.spines[["top", "right"]].set_visible(False)
@@ -329,6 +347,9 @@ def main() -> int:
         "noise ×0.5–2, ground friction 0.5–1.0) evaluated with fixed seeds; rates carry "
         "Wilson 95 % intervals.\n",
         md_table(acc),
+        "\n_Targets from the project spec (§7): T1 ≥ 95 % over 1,000 randomized episodes, T2 ≥ 90 %, "
+        "T3 ≥ 95 %; T4 = every episode within every budget. \"PASS\" uses the point estimate; the "
+        "column also flags a CI lower bound below the target._\n",
         "\n**Headlines**\n",
         f"* **T1 drop landing (1–5 m, ≤30° tilt, ≤2 rad/s spin)**: baseline "
         f"{pct(S['t1_baseline']['success'])}; all failures are horizontal-speed "
@@ -355,7 +376,9 @@ def main() -> int:
         exec_md.append(
             f"* **Pod placement**: moving the pods 3.6 cm forward (thrust line through the "
             f"CoM) changes T1 jet gas by {100 * pj2['rel']:+.1f} % "
-            f"({pj2['diff']:+.1f} ± {pj2['ci']:.1f} N·s paired, 200 eps).")
+            f"({pj2['diff']:+.1f} ± {pj2['ci']:.1f} N·s paired, 200 eps) and total gas by "
+            f"{100 * paired(subset(R['t1_baseline'], range(200)), R['t1_pods_fwd'], total_impulse)['rel']:+.1f} % "
+            f"— as much as the residual policy saves, without landing faster.")
     sec.append(("1. Executive summary", "\n".join(exec_md)))
 
     # ---------------------------------------------------------------- system description
@@ -370,11 +393,11 @@ def main() -> int:
             {"metric": "safe landing", "value": pct(s["success"])},
             {"metric": "bad contact (head/torso/pelvis first)", "value": pct(s["bad_contact"])},
             {"metric": "airbags deployed", "value": pct(s["airbags_deployed"])},
-            {"metric": "|vz| at impact mean / p95 / max [m/s]",
+            {"metric": "\\|vz\\| at impact mean / p95 / max [m/s]",
              "value": f"{abs(stat(s, 'impact_v_vertical_landed')):.2f} / "
                       f"{s['stats']['impact_v_vertical_landed']['p95']:.2f} / "
                       f"{s['stats']['impact_v_vertical_landed']['max']:.2f}"},
-            {"metric": "|vh| at impact mean / p95 / max [m/s]",
+            {"metric": "\\|vh\\| at impact mean / p95 / max [m/s]",
              "value": f"{stat(s, 'impact_v_horizontal_landed'):.2f} / "
                       f"{s['stats']['impact_v_horizontal_landed']['p95']:.2f} / "
                       f"{s['stats']['impact_v_horizontal_landed']['max']:.2f}"},
@@ -390,8 +413,8 @@ def main() -> int:
             p = r["episode_params"]
             rows.append({"seed": r["seed"], "mode": primary_failure(r, s["limits"]),
                          "drop h [m]": p["drop_height"], "tilt [deg]": p["tilt_deg"],
-                         "|ω| [rad/s]": p["angvel"], "|vz| [m/s]": abs(r["impact_v_vertical"]),
-                         "|vh| [m/s]": abs(r["impact_v_horizontal"]),
+                         "\\|ω\\| [rad/s]": p["angvel"], "\\|vz\\| [m/s]": abs(r["impact_v_vertical"]),
+                         "\\|vh\\| [m/s]": abs(r["impact_v_horizontal"]),
                          "tilt@impact [deg]": r["tilt_at_impact_deg"],
                          "mass ×": p["mass_scale"]})
         t1.append(md_table(rows))
@@ -415,13 +438,13 @@ def main() -> int:
                      ("pod gas [N·s]", lambda r: r["impulse_gas_pods"]),
                      ("jet gas [N·s]", lambda r: r["impulse_gas_jets"]),
                      ("fan battery [Wh]", lambda r: r["battery_wh"]),
-                     ("|vz| at impact [m/s]", lambda r: abs(r["impact_v_vertical"])),
-                     ("|vh| at impact [m/s]", lambda r: abs(r["impact_v_horizontal"])),
+                     ("\\|vz\\| at impact [m/s]", lambda r: abs(r["impact_v_vertical"])),
+                     ("\\|vh\\| at impact [m/s]", lambda r: abs(r["impact_v_horizontal"])),
                      ("tilt at impact [deg]", lambda r: r["tilt_at_impact_deg"])]:
         q = paired(R["t1_baseline"], R["t1_residual"], key)
-        cmp_rows.append({"quantity": lab, "baseline": f"{q['mean_a']:.3g}",
-                         "residual": f"{q['mean_b']:.3g}",
-                         "paired diff (95 % CI)": f"{q['diff']:+.3g} ± {q['ci']:.2g}",
+        cmp_rows.append({"quantity": lab, "baseline": num(q['mean_a']),
+                         "residual": num(q['mean_b']),
+                         "paired diff (95 % CI)": f"{snum(q['diff'])} ± {num(q['ci'])}",
                          "relative": f"{100 * q['rel']:+.1f} %"})
     cmp_rows.insert(0, {"quantity": "safe landing", "baseline": pct(S["t1_baseline"]["success"]),
                         "residual": pct(S["t1_residual"]["success"]),
@@ -446,10 +469,10 @@ def main() -> int:
         {"metric": "jets mean / p95 / max [N·s] (cap 600)",
          "value": f"{bud(s, 'impulse_gas_jets'):.0f} / {bud(s, 'impulse_gas_jets', 'p95'):.0f} / "
                   f"{bud(s, 'impulse_gas_jets', 'max'):.0f}"},
-        {"metric": "|vz| at platform contact mean / max [m/s]",
+        {"metric": "\\|vz\\| at platform contact mean / max [m/s]",
          "value": f"{abs(stat(s, 'impact_v_vertical_landed')):.2f} / "
                   f"{s['stats']['impact_v_vertical_landed']['max']:.2f}"},
-        {"metric": "|vh| at platform contact mean / max [m/s]",
+        {"metric": "\\|vh\\| at platform contact mean / max [m/s]",
          "value": f"{stat(s, 'impact_v_horizontal_landed'):.2f} / "
                   f"{s['stats']['impact_v_horizontal_landed']['max']:.2f}"},
     ]), "", md_table(bins_table(R["t2_jump"], "platform_distance", [1.3, 1.4, 1.5, 1.6, 1.7001]))]
@@ -521,6 +544,8 @@ def main() -> int:
             nd = 2 if bk == "battery_wh" else 0
             row[lab] = f"{u['mean']:.{nd}f} / {u['p95']:.{nd}f} / {u['max']:.{nd}f}"
         row["max jets frac"] = f"{100 * s['budget_usage']['impulse_gas_jets']['used_frac']['max']:.0f} %"
+        cap = s["budgets"]["impulse_gas_jets"]
+        row["jet tank emptied"] = sum(r["impulse_gas_jets"] >= 0.999 * cap for r in R[k])
         row["within all"] = pct(s["budget_usage"]["all_within"])
         rows.append(row)
     t4.append(md_table(rows))
@@ -569,7 +594,7 @@ def main() -> int:
                          ("pod gas [N·s]", lambda r: r["impulse_gas_pods"]),
                          ("jet gas [N·s]", lambda r: r["impulse_gas_jets"]),
                          ("total gas [N·s]", total_impulse),
-                         ("|vh| at impact [m/s]", lambda r: abs(r["impact_v_horizontal"])),
+                         ("\\|vh\\| at impact [m/s]", lambda r: abs(r["impact_v_horizontal"])),
                          ("tilt at impact [deg]", lambda r: r["tilt_at_impact_deg"])]:
             if key is None:
                 rows.append({"quantity": lab,
@@ -578,9 +603,9 @@ def main() -> int:
                              "paired diff (95 % CI)": "", "relative": ""})
                 continue
             q = paired(base200, R["t1_pods_fwd"], key)
-            rows.append({"quantity": lab, "default (seeds 0–199)": f"{q['mean_a']:.3g}",
-                         "pods +3.6 cm fwd": f"{q['mean_b']:.3g}",
-                         "paired diff (95 % CI)": f"{q['diff']:+.3g} ± {q['ci']:.2g}",
+            rows.append({"quantity": lab, "default (seeds 0–199)": num(q['mean_a']),
+                         "pods +3.6 cm fwd": num(q['mean_b']),
+                         "paired diff (95 % CI)": f"{snum(q['diff'])} ± {num(q['ci'])}",
                          "relative": f"{100 * q['rel']:+.1f} %"})
         rec.append("### 9.2 Move the lift pods forward onto the CoM (configs/suit_variant_pods_fwd.yaml)\n")
         rec.append(md_table(rows))
@@ -665,14 +690,18 @@ limits). Trained on T1 with full randomisation on seeds disjoint from the test s
 """
 
 T1_FAILURE_MD = """
-**Failure analysis.** Every T1 failure is a *horizontal* impact speed above 1 m/s; vertical
-speed and tilt stay inside the limits in all 1000 episodes and nothing but a foot ever
-touches first (no airbags were needed). The failures concentrate in short drops (≈1–1.7 m)
+**Failure analysis.** Every *baseline* T1 failure is a horizontal impact speed above 1 m/s;
+vertical speed and tilt stay inside the limits in all 1000 episodes, a foot always touches
+first and the baseline never deployed an airbag. The residual policy fails on 4 of the same
+kind (seeds 307, 366 shared with the baseline, plus 140, 559), one hard landing (seed 726,
+which the baseline also fails, here |vz| 2.6 m/s) and one tilt failure from a 4.6 m drop
+(seed 88, 23.7° at impact); it deployed airbags in 3 episodes (88, 559, 726 — all failures).
+The baseline failures concentrate in short drops (≈1–1.7 m)
 with large initial tilt and spin: the body has ~0.5 s of fall, the attitude loop spends it
 righting the thrust axis, and the horizontal velocity created by the tilted braking thrust
 cannot be damped before touchdown — horizontal damping is only available by tilting the
 thrust axis (≤10°), and the jets' direct lateral authority is small (2 side jets per
-direction at 40 N). Taller drops (> 2 m) are 100 % in both controllers.
+direction at 40 N). Drops above 2 m are 100 % for the baseline (one residual tilt failure at 4.6 m).
 """
 
 RL_MD = """
@@ -705,7 +734,9 @@ exactly 0 is counted as within but is flagged by the "max jets frac" column). Po
 from their limit in every task (T1 p95 ≈ 60 %), the fans use a negligible fraction of the
 battery, and **jet gas is the binding resource**: T2 averages ~80 % of the jet tank and T3
 pushes above ~400 N empty it. The jets spend a large part of their gas cancelling the pod
-pitch moment (pods 3.6 cm behind the CoM) — see section 9.2.
+pitch moment (pods 3.6 cm behind the CoM) — see section 9.2. Note that the residual policy
+empties the jet tank in 1 % of T1 episodes (10/1000, vs 1/1000 for the baseline): it moves
+work from the pods to the jets, which is cheap in total impulse but eats the small reserve.
 """
 
 VIDEO_MD = """
@@ -722,15 +753,35 @@ controllers (the allocator adapts to the thruster set from the YAML).
 """
 
 SIDE_JET_MD = """
-The default suit has only two lateral jets per direction (upper back + thigh side jets), so
-its sideways authority about the feet is ≈1.25 m/s² versus 4–5 m/s² sagittally; lateral pushes
-are exactly where the 500 N failures sit. Adding four 40 N lateral jets (one per side at the
-shoulders, one per side at the hips; +4 jets, ≈ +0.2 kg) closes most of that gap at the same
-jet tank. **Recommendation: add the 4 side jets** (48 thrusters). It costs nothing at nominal
-loads and is the single largest robustness gain found for T3.
+The default suit has only two lateral jets per direction (upper-back + thigh side jets), so
+its sideways authority about the feet is ≈1.25 m/s² versus 4–5 m/s² sagittally. The stress
+tests show exactly that: at 500 N the default suit holds every push within 45° of the
+sagittal axis but loses almost every push more than 60° off it, and its failures all end
+with the jet tank empty (600 N·s). Adding four 40 N lateral jets (one per side at the
+shoulders, one per side at the hips, on the existing jet tank) lifts 400 N from 88 % to
+100 % and 500 N from 51 % to 90 %, and cuts jet gas by about a third at the nominal 200 N
+(81 → 55 N·s), because the push is now cancelled by a direct lateral force rather than by
+pod-differential / leveraged jets.
+
+In T1 the side jets reduce jet gas by ≈8 % but do **not** fix the low-drop horizontal-speed
+failures (the same seeds 72 and 180 fail, now just above the 1 m/s limit at 1.04 / 1.01 m/s):
+those are limited by attitude-recovery time, not lateral thrust — a controller change
+(direct jet horizontal damping near the ground, or the residual policy) is needed there.
+
+**Recommendation: add the 4 side jets** (48 thrusters). It costs nothing at nominal loads,
+saves jet gas in every task tested and is the largest robustness gain found for T3.
 """
 
 PODS_MD = """
+With the thrust line through the CoM the jets no longer cancel a steady pod pitch moment:
+jet gas drops ≈9 % and pod gas ≈5 % (the attitude loop also needs less pod-differential
+help), ≈ −6 % total — about the same saving as the residual PPO policy, with no learning
+and without landing faster. Safety is unchanged within the 200-episode resolution (seed 180,
+a 1.0 m drop, still fails on horizontal speed; seed 72 now passes). The one cost is a
+slightly larger tilt at impact (+1.6° mean, still far below the 20° limit): the baseline
+gains were tuned on the default geometry and lean on the pod pitch moment, so a retune
+should recover it.
+
 **Recommendation: mount the pods ≈3.6 cm further forward** (or shift the hip-pod mass
 equivalently) so the pod thrust line passes through the whole-body CoM in the landing
 posture; the jets then no longer have to hold a steady counter-pitch moment while the pods
@@ -756,8 +807,10 @@ LIMITS_MD = """
   failures, but it has not done so yet.
 * **Airbag contact accounting.** A deployed airbag touching the ground is attributed to its
   carrier segment (torso / pelvis) and therefore counts as a "bad contact" in the env's
-  bookkeeping. No T1 episode deployed airbags, so no reported number is affected, but the
-  airbag path is effectively untested end-to-end and the metric must be fixed (count airbag
+  bookkeeping. The baseline never deployed airbags in any task; the residual policy deployed
+  them in 3/1000 T1 episodes (all already failures on speed/tilt, and seed 726 indeed logs
+  `any_bad_contact` after the bag hit the ground), so no reported success rate is affected,
+  but the airbag path is effectively untested end-to-end and the metric must be fixed (count airbag
   geoms separately) before airbag-dependent scenarios are evaluated.
 * **Estimator tilt residual.** In free fall and under thrust the attitude is gyro-only (the
   gravity correction needs quasi-static conditions), so the ±2° initial alignment error and
