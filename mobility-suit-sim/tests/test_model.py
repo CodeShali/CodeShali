@@ -8,7 +8,7 @@ from suitsim.interfaces import (
     load_thruster_specs, thruster_site,
 )
 from suitsim.model import (
-    ModelRandomizer, airbags_deployed, apply_mass_scale, build_mjcf, build_model, com_state,
+    AirbagState, ModelRandomizer, airbag_fraction, airbags_deployed, apply_mass_scale, build_mjcf, build_model, com_state,
     lowest_point, model_info, set_airbags, set_ground_friction, set_initial_pose,
 )
 
@@ -88,19 +88,97 @@ def test_sensors(model):
 def test_airbags_toggle(model, cfg):
     ids = [_id(model, mujoco.mjtObj.mjOBJ_GEOM, airbag_geom(b)) for b in AIRBAGS]
     assert all(i >= 0 for i in ids)
-    assert not airbags_deployed(model)
-    for g in ids:
-        assert model.geom_contype[g] == 0 and model.geom_conaffinity[g] == 0
-        assert model.geom_rgba[g, 3] == 0
-    set_airbags(model, True)
     c = cfg["human"]["contact"]
+    ac = cfg["suit"]["airbags"]
+    # compiled colliding with the ground (MuJoCo fixes collision filtering at compile time)
     for g in ids:
         assert model.geom_contype[g] == c["body_contype"]
         assert model.geom_conaffinity[g] == c["body_conaffinity"]
+    # compiled stowed: tiny, inside the carrier segment, invisible
+    assert not airbags_deployed(model)
+    assert airbag_fraction(model) == pytest.approx(0.0)
+    for bag, g in zip(AIRBAGS, ids):
+        assert model.geom_rgba[g, 3] == 0
+        dep = np.asarray(ac[bag]["size"], float)
+        np.testing.assert_allclose(model.geom_size[g, :dep.size], ac["stowed_scale"] * dep)
+        assert model.geom_rbound[g] < 0.01
+    set_airbags(model, True)
+    for bag, g in zip(AIRBAGS, ids):
+        dep = np.asarray(ac[bag]["size"], float)
+        np.testing.assert_allclose(model.geom_size[g, :dep.size], dep)
+        np.testing.assert_allclose(model.geom_pos[g], ac[bag]["pos"])
         assert model.geom_rgba[g, 3] > 0
+        assert model.geom_contype[g] == c["body_contype"]
     assert airbags_deployed(model)
+    mujoco.mj_setConst(model, mujoco.MjData(model))       # used to fail: 'setBound: ...'
+    assert airbags_deployed(model)
+    set_airbags(model, 0.5)
+    assert airbag_fraction(model) == pytest.approx(0.5)
     set_airbags(model, False)
     assert not airbags_deployed(model)
+    mujoco.mj_setConst(model, mujoco.MjData(model))
+
+
+def test_airbag_inflation_over_deploy_time(model, cfg):
+    st = AirbagState(model, cfg)
+    st.stow(model)
+    dt = float(model.opt.timestep)
+    st.step(model, dt)
+    assert airbag_fraction(model, cfg) == 0.0              # not triggered
+    st.deploy()
+    n = int(round(cfg["suit"]["airbags"]["deploy_time"] / dt))
+    for _ in range(n // 2):
+        st.step(model, dt)
+    assert 0.3 < airbag_fraction(model, cfg) < 0.7
+    for _ in range(n):
+        st.step(model, dt)
+    assert airbags_deployed(model, cfg)
+    st.stow(model)
+    assert airbag_fraction(model, cfg) == 0.0 and not st.triggered
+
+
+def _face_down_drop(model, cfg, deployed):
+    """Drop face-down from 0.5 m; returns (airbag geoms that touched the ground, peak torso
+    IMU specific force)."""
+    set_airbags(model, deployed, cfg)
+    ModelRandomizer(model, cfg).apply(1.0, None)            # mj_setConst in either state
+    d = mujoco.MjData(model)
+    set_initial_pose(model, d, 0.5, np.array([0.7071068, 0.0, 0.7071068, 0.0]), np.zeros(3))
+    s = _id(model, mujoco.mjtObj.mjOBJ_SENSOR, imu_accel_sensor("torso"))
+    adr = model.sensor_adr[s]
+    ground = _id(model, mujoco.mjtObj.mjOBJ_GEOM, GROUND_GEOM)
+    bags = set(_id(model, mujoco.mjtObj.mjOBJ_GEOM, airbag_geom(b)) for b in AIRBAGS)
+    hit, peak = set(), 0.0
+    for _ in range(1000):
+        mujoco.mj_step(model, d)
+        peak = max(peak, float(np.linalg.norm(d.sensordata[adr:adr + 3])))
+        for g1, g2 in d.contact.geom[: d.ncon]:
+            if ground in (g1, g2):
+                hit |= {int(g1), int(g2)} & bags
+    return {mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, g) for g in hit}, peak
+
+
+def test_airbags_cushion_face_down_drop(model, cfg):
+    hit_stowed, peak_stowed = _face_down_drop(model, cfg, False)
+    hit_dep, peak_dep = _face_down_drop(model, cfg, True)
+    assert hit_stowed == set()                              # stowed bags never touch
+    assert airbag_geom("chest") in hit_dep                  # deployed bags make contact
+    assert peak_dep < 0.6 * peak_stowed, (peak_dep, peak_stowed)
+
+
+def test_airbags_do_not_affect_altimeter(model, cfg):
+    from suitsim.sensors.suite import Altimeter
+    alt = Altimeter(model, cfg["sensors"]["altimeter"])
+    d = mujoco.MjData(model)
+    set_initial_pose(model, d, 1.0, np.array([0.9238795, 0.0, 0.3826834, 0.0]), np.zeros(3))
+    ranges = []
+    for dep in (False, True):
+        set_airbags(model, dep, cfg)
+        mujoco.mj_forward(model, d)
+        ranges.append(alt.cast(model, d))
+    set_airbags(model, False, cfg)
+    assert ranges[0] == pytest.approx(ranges[1])
+    assert ranges[0] < alt.max_range
 
 
 def test_no_self_collision(model):

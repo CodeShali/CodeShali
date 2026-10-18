@@ -33,7 +33,7 @@ from suitsim.viz.gl import ensure_gl  # noqa: E402
 ensure_gl()  # select a headless GL backend before anything imports mujoco
 
 from suitsim.eval.batch import EnvSpec, parse_overrides, results_equal, run_episodes  # noqa: E402
-from suitsim.eval.metrics import primary_failure, summarize, worst_best  # noqa: E402
+from suitsim.eval.metrics import outcome_label, primary_failure, summarize, worst_best  # noqa: E402
 from suitsim.eval.report import write_eval_outputs, write_json  # noqa: E402
 from suitsim.interfaces import save_run_metadata  # noqa: E402
 
@@ -85,7 +85,7 @@ def render_ranked(spec: EnvSpec, ranked: list[tuple[str, int, dict]], out_dir: P
             res = rec.record(seed)
             mp4 = rec.save_mp4(out_dir / f"{stem}.mp4")
             png = plot_episode(res.get("trajectory"), out_dir / f"{stem}.png", info=res, cfg=cfg,
-                               title=f"{label} #{i} seed {seed} ({primary_failure(res)})")
+                               title=f"{spec.controller} {label} #{i} seed {seed} ({outcome_label(res)})")
             same = results_equal([r], [res], tol=1e-6)
             made.append({"label": label, "rank": i, "seed": seed, "video": mp4.name,
                          "plot": png.name, "frames": res["n_frames"], "deterministic": same,

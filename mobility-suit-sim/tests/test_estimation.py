@@ -115,6 +115,33 @@ def test_free_fall_noise_free_is_tight(model):
     assert max(x["h"] for x in log) < 0.03
 
 
+@pytest.mark.parametrize("w", [(-1.6, -1.9, -1.8), (1.5, 1.5, 0.0),
+                               (0.0, 3.0, 0.0), (3.0, 0.91, -1.59)])
+def test_free_fall_spinning_detected_promptly(model, w):
+    """Regression: on a tumbling body the torso IMU also measures centripetal acceleration
+    (|w|^2 x lever) and could stay above ``freefall_accel_thresh`` for seconds; the
+    mass-weighted, lever-compensated CoM specific force must latch it within 50-80 ms."""
+    a = math.radians(20.0)
+    q = np.array([math.cos(a / 2), math.sin(a / 2), 0.0, 0.0])
+
+    def setup(m, d):
+        model_pkg.set_initial_pose(m, d, 5.0, q, np.asarray(w, float))
+    log, _, _ = run(model, CFG, setup, 0.3, 0)
+    det = next((x["t"] for x in log if x["e"]["free_fall"]), None)
+    assert det is not None and 0.050 <= det <= 0.080, det
+
+
+def test_standing_push_no_free_fall(model):
+    """A 200 N horizontal push on the torso while standing (feet loaded) is not free fall."""
+    tid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, TORSO_BODY)
+
+    def setup(m, d):
+        stand_setup(m, d)
+        d.xfrc_applied[tid, 0] = 200.0
+    log, _, _ = run(model, CFG, setup, 0.3, 0)
+    assert not any(x["e"]["free_fall"] for x in log)
+
+
 def test_standing_no_free_fall(model):
     log, est, _ = run(model, CFG, stand_setup, 1.5, 0)
     assert not any(x["e"]["free_fall"] for x in log)

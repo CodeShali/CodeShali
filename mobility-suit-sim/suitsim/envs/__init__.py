@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from suitsim.envs.base import CONTROLLERS, SuitEnvBase
 from suitsim.envs.drop_landing import DropLandingEnv
+from suitsim.envs.boosted_jump import BoostedJumpEnv
 
-_REGISTRY = {"drop_landing": DropLandingEnv}
+_REGISTRY = {"drop_landing": DropLandingEnv, "boosted_jump": BoostedJumpEnv}
 _RESERVED = ("boosted_jump", "push_recovery")
 
 

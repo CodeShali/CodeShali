@@ -1,10 +1,15 @@
-"""Domain randomisation of the model: human segment mass/inertia and ground friction."""
+"""Domain randomisation of the model: human segment mass/inertia and ground friction.
+
+Airbag geoms out-prioritise the ground in contacts (their soft solref/solimp apply), so their
+friction is kept equal to the ground's here.
+"""
 from __future__ import annotations
 
 import mujoco
 import numpy as np
 
 from suitsim.interfaces import GROUND_GEOM, SEGMENTS, load_config
+from suitsim.model.airbags import airbag_geom_ids
 
 
 class ModelRandomizer:
@@ -22,6 +27,7 @@ class ModelRandomizer:
         self.nom_mass = model.body_mass.copy()
         self.nom_inertia = model.body_inertia.copy()
         self.nom_friction = model.geom_friction[self.ground].copy()
+        self.airbags = np.asarray(airbag_geom_ids(model), int)   # friction mirrors the ground
         # suit (non-scaled) contribution per body: point-like spheres placed at the segment
         # geom centre == body CoM (see builder), so the parallel-axis term vanishes.
         cfg = cfg if cfg is not None else load_config()
@@ -45,6 +51,7 @@ class ModelRandomizer:
         m.geom_friction[self.ground] = self.nom_friction
         if friction is not None:
             m.geom_friction[self.ground, 0] = float(friction)
+        m.geom_friction[self.airbags] = m.geom_friction[self.ground]
         _set_const(m)
 
     def restore(self) -> None:
@@ -78,3 +85,4 @@ def set_ground_friction(model: mujoco.MjModel, mu: float) -> None:
     r = _randomizer(model)
     model.geom_friction[r.ground] = r.nom_friction
     model.geom_friction[r.ground, 0] = float(mu)
+    model.geom_friction[r.airbags] = model.geom_friction[r.ground]

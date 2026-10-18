@@ -1,21 +1,45 @@
-# PPO residual-policy training.
+# PPO residual-policy training (M5): scripts/train.py --config configs/train_ppo.yaml [--quick]
 task_config: task_drop.yaml
 seed: 0
+# Spec target (16 envs, 20M steps). On the 4-core dev container one env runs ~80 steps/s,
+# 4 envs ~250-300 steps/s => 20M steps ~ 20 h at 4 envs; see <run>/timing.json for the
+# measured projection.  Use --quick or --total-timesteps / --n-envs on small machines.
 n_envs: 16
 total_timesteps: 20000000
 quick:                           # --quick: laptop CPU
   n_envs: 4
   total_timesteps: 200000
+  eval_freq: 25000
+  checkpoint_freq: 50000
 ppo:
   learning_rate: 3.0e-4
-  n_steps: 1024
-  batch_size: 4096
-  n_epochs: 5
+  n_steps: 1024                  # per env -> rollout = n_steps * n_envs
+  batch_size: 1024
+  n_epochs: 10
   gamma: 0.995
   gae_lambda: 0.95
   clip_range: 0.2
   ent_coef: 0.0
+  vf_coef: 0.5
+  max_grad_norm: 0.5
   policy_hidden: [128, 128]
+  log_std_init: -2.0             # std 0.135 -> +-40 N / +-80 N / 8 N*m exploration: the
+                                 # residual starts as a small perturbation of the baseline
+action_init_scale: 0.0           # action-head weights scaled by this at init (0 => a == 0)
+normalize:
+  obs: true                      # VecNormalize obs (stats saved as vecnormalize.pkl)
+  reward: false
+  clip_obs: 10.0
+# task-config overrides used for training only (eval/evaluate.py uses the task config as is)
+task_overrides:
+  reward:
+    shaping_impulse: 0.002       # dense per-step gas penalty [1/(N*s)] (credit assignment);
+    k3_impulse: 0.0              # ... replaces the equal terminal one (same episode total)
 policy_dt: 0.02                  # [s] residual policy acts at 50 Hz (held between control steps)
-eval_episodes: 100
+eval_freq: 100000                # timesteps between periodic deterministic evals (0 = off)
+eval_episodes: 50
+eval_seed0: 100000               # eval seeds 100000.. (disjoint from test seeds 0..999)
+eval_workers: 4
+eval_baseline: true              # also evaluate the baseline on the eval seeds once
+checkpoint_freq: 500000
 out_dir: runs

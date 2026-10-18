@@ -22,7 +22,7 @@ from suitsim.viz.gl import ensure_gl  # noqa: E402
 ensure_gl()
 
 from suitsim.eval.batch import EnvSpec, parse_overrides  # noqa: E402
-from suitsim.eval.metrics import primary_failure  # noqa: E402
+from suitsim.eval.metrics import outcome_label  # noqa: E402
 from suitsim.eval.report import write_json  # noqa: E402
 
 
@@ -65,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
         rec.close()
         env.close()
     plot_episode(res.get("trajectory"), out.with_suffix(".png"), info=res, cfg=cfg,
-                 title=f"{task} {args.controller} seed {args.seed} ({primary_failure(res)})")
+                 title=f"{task} {args.controller} seed {args.seed} ({outcome_label(res)})")
     res.pop("trajectory", None)
     write_json(res, out.with_suffix(".json"))
     print(json.dumps({k: res.get(k) for k in ("success", "safe", "impact_v_vertical",

@@ -131,6 +131,13 @@ def primary_failure(info: dict, limits: dict | None = None) -> str:
     return "none"
 
 
+def outcome_label(info: dict, limits: dict | None = None) -> str:
+    """Human-readable outcome for titles: 'success' or 'failure: <mode>' (never a bare
+    'none', which reads like a controller name)."""
+    m = primary_failure(info, limits)
+    return "success" if m == "none" else f"failure: {m}"
+
+
 def episode_badness(info: dict, limits: dict | None = None) -> float:
     """Continuous 'how bad was it' score (0 = perfect landing, dimensionless)."""
     lim = {**DEFAULT_SAFE_LIMITS, **(limits or {})}

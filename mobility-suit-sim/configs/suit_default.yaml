@@ -12,6 +12,10 @@ sim:
   air_density: 1.225       # [kg/m^3]
   drag_cd: 1.0
   drag_area: 0.7           # [m^2]
+  # MuJoCo's per-body BVH midphase is built from the geom sizes at compile time; airbags are
+  # resized at runtime (stowed <-> deployed), so it must be off or deployed bags are culled.
+  # Bodies carry only ~1-4 colliding geoms each, so the midphase saves nothing here.
+  collision_midphase: false
 
 human:
   mass: 91.0               # [kg]
@@ -131,13 +135,16 @@ suit:
     shell:        {total: 2.0, bodies: [pelvis, torso, thigh_l, thigh_r, shin_l, shin_r, upper_arm_l, upper_arm_r]}
 
   airbags:
-    # Compliant contact padding, disabled until deployed. Shapes are deployed sizes.
+    # Compliant contact padding (collides with the ground only). Stowed = shrunk inside the
+    # body (stowed_scale); deployed by geometry at runtime. Shapes are deployed sizes.
     collar: {body: torso,  type: capsule, pos: [0.0, 0.0, 0.47], size: [0.09, 0.16], euler: [90, 0, 0]}
     chest:  {body: torso,  type: ellipsoid, pos: [0.13, 0.0, 0.28], size: [0.10, 0.18, 0.20]}
     hips:   {body: pelvis, type: capsule, pos: [-0.10, 0.0, 0.0], size: [0.12, 0.17], euler: [90, 0, 0]}
     solref: [0.06, 1.0]    # soft contact (timeconst, dampratio)
     solimp: [0.5, 0.95, 0.05]
-    deploy_time: 0.03      # [s] inflation time
+    deploy_time: 0.03      # [s] inflation time (linear size/position ramp)
+    stowed_scale: 0.02     # stowed size = this x deployed size, at the carrier segment's geom
+                           #   centre (inside the body: never touches the ground)
 
   actuator_classes:
     lift_pod:  {f_max: 1500.0, tau: 0.005, budget: impulse_gas_pods, alloc_lambda: 1.0e-2}
@@ -236,7 +243,9 @@ estimation:
   init_velocity_err: 0.05      # [m/s]
   init_height_err: 0.05        # [m]
   altimeter_gain: 0.2          # complementary-filter blend for height/vertical velocity
-  freefall_accel_thresh: 2.0   # [m/s^2] |specific force| below this => free fall
+  freefall_accel_thresh: 2.0   # [m/s^2] |torso specific force| below this => free fall
+  freefall_com_accel_thresh: 2.0  # [m/s^2] |mass-weighted CoM specific force| below this => free
+                                  #   fall (OR'ed with the torso test; robust to body spin)
   freefall_min_time: 0.05      # [s]
   foot_contact_threshold: 20.0 # [N]
   height_filter: kf            # kf | complementary

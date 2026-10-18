@@ -137,8 +137,11 @@ def _build_tree(cfg: dict) -> ET.Element:
 
     root = ET.Element("mujoco", model="human_suit")
     ET.SubElement(root, "compiler", angle="radian", autolimits="true", inertiafromgeom="true")
-    ET.SubElement(root, "option", timestep=_f(cfg["sim"]["timestep"]),
-                  gravity=_f([0, 0, -cfg["sim"]["gravity"]]), integrator="implicitfast")
+    opt = ET.SubElement(root, "option", timestep=_f(cfg["sim"]["timestep"]),
+                        gravity=_f([0, 0, -cfg["sim"]["gravity"]]), integrator="implicitfast")
+    # runtime-resized airbags invalidate the compile-time BVH (see sim.collision_midphase)
+    if not bool(cfg["sim"].get("collision_midphase", False)):
+        ET.SubElement(opt, "flag", midphase="disable")
     vis = ET.SubElement(root, "visual")
     ET.SubElement(vis, "global", offwidth=str(_OFFSCREEN[0]), offheight=str(_OFFSCREEN[1]))
     ET.SubElement(vis, "quality", shadowsize="2048")
@@ -158,8 +161,9 @@ def _build_tree(cfg: dict) -> ET.Element:
                   directional="true", castshadow="true", diffuse="0.7 0.7 0.7")
     c = hum["contact"]
     mu = float(cfg["sim"]["ground_friction"])
+    ground_friction = _f([mu, 0.005, 0.0001])    # sliding (config), torsional, rolling
     ET.SubElement(world, "geom", name=GROUND_GEOM, type="plane", size="50 50 0.1",
-                  material="groundmat", friction=_f([mu, 0.005, 0.0001]),
+                  material="groundmat", friction=ground_friction,
                   contype=str(c["ground_contype"]), conaffinity=str(c["ground_conaffinity"]),
                   priority=str(c["ground_priority"]), condim=str(c["condim"]))
     ET.SubElement(world, "camera", name="side", pos="0 -6 1.5", xyaxes="1 0 0 0 0.15 1")
@@ -195,12 +199,23 @@ def _build_tree(cfg: dict) -> ET.Element:
             ET.SubElement(b, "geom", name=suit_mass_geom(item, name), type="sphere",
                           size=_f(suit_r), pos=_f(centre), mass=_f(m), contype="0",
                           conaffinity="0", group=str(_GROUP_SUIT), rgba=_RGBA_SUITMASS)
-        # airbags (massless, stowed)
+        # airbags (massless). Compiled WITH the body contact bits (MuJoCo fixes part of the
+        # collision filtering at compile time) and in the stowed geometry: shrunk by
+        # ``stowed_scale`` at the segment geom centre, deep inside the body.  Deployment is
+        # by geometry at runtime (suitsim.model.airbags).  Priority above the ground's so
+        # the airbag's soft solref/solimp govern its ground contacts (MuJoCo takes contact
+        # parameters from the higher-priority geom); its friction mirrors the ground's
+        # (kept in sync by ModelRandomizer).
+        stowed_scale = float(suit["airbags"]["stowed_scale"])
         for bag in bags_by_body.get(name, []):
             a = suit["airbags"][bag]
-            ab = {"name": airbag_geom(bag), "type": a["type"], "size": _f(a["size"]),
-                  "pos": _f(a["pos"]), "mass": "0", "contype": "0", "conaffinity": "0",
-                  "condim": str(c["condim"]), "solref": _f(suit["airbags"]["solref"]),
+            ab = {"name": airbag_geom(bag), "type": a["type"],
+                  "size": _f(stowed_scale * np.asarray(a["size"], float)),
+                  "pos": _f(centre), "mass": "0", "contype": contact["contype"],
+                  "conaffinity": contact["conaffinity"],
+                  "condim": str(c["condim"]), "priority": str(int(c["ground_priority"]) + 1),
+                  "friction": ground_friction,
+                  "solref": _f(suit["airbags"]["solref"]),
                   "solimp": _f(suit["airbags"]["solimp"]), "rgba": _RGBA_AIRBAG,
                   "group": str(_GROUP_AIRBAG)}
             if "euler" in a:

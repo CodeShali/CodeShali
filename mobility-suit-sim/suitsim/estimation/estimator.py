@@ -23,8 +23,11 @@ Algorithm (per ``update``, 500 Hz)
    quasi-static with foot contact.
 6. The state is propagated in real time from the reset instant, so outputs refer to the
    reading time; the older altimeter sample is advanced by ``v_z * delay``.
-7. **Free fall**: |torso specific force| < ``freefall_accel_thresh`` continuously for
-   ``freefall_min_time`` -> latched ``free_fall``; ``time_since_fall`` is the time since
+7. **Free fall**: |torso specific force| < ``freefall_accel_thresh`` OR |mass-weighted,
+   lever-arm-compensated CoM specific force| (step 3) < ``freefall_com_accel_thresh``,
+   continuously for ``freefall_min_time`` -> latched ``free_fall``.  The CoM test is what
+   makes detection prompt for a tumbling body: the torso IMU then also measures
+   centripetal acceleration (|w|^2 x lever), which can keep it above threshold; ``time_since_fall`` is the time since
    the start of that low-g window (0 before detection).
 """
 from __future__ import annotations
@@ -51,6 +54,7 @@ DEFAULTS = {
     "altimeter_reacquire_time": 0.1,     # [s] of consecutive rejects -> adopt new surface
     "kinematic_height_noise": 0.01,      # [m] std, CoM-from-site kinematic error
     "attitude_err_corr": 100.0,          # [samples] correlation of attitude-induced alt error
+    "freefall_com_accel_thresh": 2.0,    # [m/s^2] |CoM specific force| below => free fall
 }
 
 
@@ -179,9 +183,13 @@ class StateEstimator:
             self.v[:2] *= max(0.0, 1.0 - float(ec["zupt_gain"]) * dt)
         self.v[2] = self.x[1]
 
-        # 7. free fall detection (torso specific force)
+        # 7. free fall detection: torso specific force OR the lever-arm-compensated,
+        #    mass-weighted CoM specific force (the torso IMU alone sees centripetal
+        #    acceleration ~|w|^2 r on a spinning body and can stay above threshold)
         ft = acc[self.ti]
-        if math.sqrt(ft @ ft) < float(ec["freefall_accel_thresh"]):
+        low_g = (math.sqrt(ft @ ft) < float(ec["freefall_accel_thresh"])
+                 or fmag < float(ec["freefall_com_accel_thresh"]))
+        if low_g:
             if self.low_g_start is None:
                 self.low_g_start = t
             if not self.free_fall and t - self.low_g_start >= float(ec["freefall_min_time"]) - 1e-9:

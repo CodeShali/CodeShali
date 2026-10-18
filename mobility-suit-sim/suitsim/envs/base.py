@@ -55,7 +55,7 @@ from suitsim.interfaces import (
     BUDGET_KEYS, FEET, GROUND_GEOM, HEAD_TORSO_BODIES, ROOT_BODY, THRUSTER_CLASSES,
     TORSO_BODY, ControlOutput, load_thruster_specs,
 )
-from suitsim.model import ModelRandomizer, build_model, model_info, set_airbags
+from suitsim.model import AirbagState, ModelRandomizer, build_model, model_info
 from suitsim.sensors import SensorSuite
 
 CONTROLLERS = ("baseline", "residual", "none")
@@ -108,6 +108,7 @@ class SuitEnvBase(gym.Env):
         solver = str((cfg.get("allocation", {}) or {}).get("solver", "active_set"))
         self.allocator = (FastAllocator if solver == "active_set" else Allocator)(self.specs, cfg)
         self.randomizer = ModelRandomizer(self.model, cfg)
+        self.airbag_state = AirbagState(self.model, cfg)
         self.controller = None if controller == "none" else BaselineLandingController(
             cfg, self.specs, geometry_fn=self.estimator.thruster_geometry)
 
@@ -193,7 +194,6 @@ class SuitEnvBase(gym.Env):
             sf = np.full(n, float(fixed["fmax_scale"]))
         if "tau_scale" in fixed:
             st = np.full(n, float(fixed["tau_scale"]))
-        set_airbags(self.model, False, self.cfg)      # before mj_setConst (compiled state)
         self.randomizer.apply(mass_scale, friction)
         self.thrusters.reset(scale_fmax=sf, scale_tau=st)
         self._noise_scale = noise
@@ -226,6 +226,7 @@ class SuitEnvBase(gym.Env):
         ss = np.random.SeedSequence(int(self.np_random.integers(2 ** 63)))
         r_task, r_sens, r_est = (np.random.default_rng(s) for s in ss.spawn(3))
         mujoco.mj_resetData(self.model, self.data)
+        self.airbag_state.stow(self.model)
         self.params = self._sample_episode(r_task)
         d = self.data
         self.sensors.rng = r_sens
@@ -285,7 +286,7 @@ class SuitEnvBase(gym.Env):
         else:
             self.u = np.zeros(self.thrusters.n)
         if ctrl.deploy_airbags and not self.airbags_deployed:
-            set_airbags(self.model, True, self.cfg)
+            self.airbag_state.deploy()            # inflates over suit.airbags.deploy_time
             self.airbags_deployed = True
             self.airbag_time = float(self.data.time)
         _, vel = self._truth_com()
@@ -293,6 +294,7 @@ class SuitEnvBase(gym.Env):
 
     def _physics_step(self) -> None:
         m, d = self.model, self.data
+        self.airbag_state.step(m, self.dt_phys)
         f = self.thrusters.step(self.u)
         apply_thrusters(m, d, self.site_ids, self.body_ids, f, out=self._xfrc)
         self._xfrc[self.root_id, :3] += self._drag

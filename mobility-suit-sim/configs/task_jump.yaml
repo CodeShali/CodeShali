@@ -1,8 +1,92 @@
-# T2 — boosted jump: stand, jump onto a 2.5 m platform.
+# T2 — boosted jump: stand on the ground, jump onto a 2.5 m platform (milestone M6).
 base: task_drop.yaml
 task:
   name: boosted_jump
-  platform_height: 2.5           # [m]
+  platform_height: 2.5           # [m] top surface
   platform_size: [1.5, 1.5]      # [m] x, y extent
-  platform_distance: 1.5         # [m] horizontal distance from start to platform centre
+  platform_distance: 1.5         # [m] nominal horizontal distance start -> platform centre (+x)
+  platform_distance_range: 0.2   # [m] uniform +- on the distance (DR; unknown to the controller
+                                 #     unless jump.mission_knows_platform)
+  platform_lateral_range: 0.0    # [m] uniform +- lateral (y) offset of the platform
+  initial_yaw_deg: 3.0           # heading randomisation of the standing start
+  initial_sway_deg: 1.5          # small standing sway (tilt about x / y)
   episode_time: 5.0
+  settle_time: 1.0               # [s] after the first foot-on-platform contact
+  # drop-landing initial-state ranges do not apply (standing start)
+  drop_height: 0.0
+  initial_tilt_deg: 0.0
+  initial_angvel: 0.0
+  fixed: null                    # e.g. {platform_distance: 1.5, yaw_deg: 0, sway_deg: 0}
+  success:
+    top_tol: 0.03                # [m] a contact counts as "on top" if within this of the top face
+    max_tilt_end_deg: 30.0       # true torso tilt at the end of the settle time
+    liftoff_height: 0.02         # [m] lowest sole above the ground -> lifted off
+# Pass (spec T2): >= 90 % of episodes `success`:
+#   * first contact after lift-off = a foot on the platform top (not its side, not the ground);
+#   * at that contact: vertical CoM speed < 2 m/s, horizontal < 1 m/s, torso tilt < 20 deg;
+#   * no head/torso/pelvis contact and no ground contact after lift-off;
+#   * after settle_time: a foot still on the platform, CoM over the footprint, tilt < 30 deg.
+safe_landing:
+  max_vertical_speed: 2.0
+  max_horizontal_speed: 1.0
+  max_tilt_deg: 20.0
+randomization:                   # same as T1 (mass, thrust, delay, sensor noise, friction)
+  enabled: true
+  human_mass_frac: 0.10
+  thruster_force_frac: 0.15
+  response_delay_frac: 0.50
+  sensor_noise_scale: [0.5, 2.0]
+  ground_friction: [0.5, 1.0]    # also applied to the platform top
+# Baseline jump controller (suitsim.control.jump). Attitude gains / braking profile defaults
+# come from `baseline:` (inherited from task_drop.yaml) unless overridden here.
+jump:
+  mission_knows_platform: false  # true: controller gets the episode's true platform position
+  settle_time: 0.10              # [s] standing still before the crouch (estimator settles)
+  crouch_time: 0.35              # [s] ramp to the crouch posture
+  crouch_hold: 0.10              # [s]
+  crouch_posture:                # [deg] (unlisted joints: nominal posture)
+    hip_l_flex: 25.0
+    hip_r_flex: 25.0
+    knee_l_flex: 50.0
+    knee_r_flex: 50.0
+    ankle_l_flex: 25.0
+    ankle_r_flex: 25.0
+    lumbar_pitch: 10.0
+  push_posture:                  # [deg] leg extension commanded at boost start
+    hip_l_flex: 0.0
+    hip_r_flex: 0.0
+    knee_l_flex: 2.0
+    knee_r_flex: 2.0
+    ankle_l_flex: -20.0
+    ankle_r_flex: -20.0
+  leg_push: true
+  flight_posture_delay: 0.08     # [s] after lift-off -> back to the nominal (landing) posture
+  boost_thrust: 2900.0           # [N] vertical boost force request
+  boost_ramp: 0.03               # [s]
+  apex_clearance: 0.40           # [m] planned apex of the soles above the platform top
+  apex_drag_margin: 0.03         # [m] extra apex for drag / thrust tail-off
+  # horizontal guidance (x toward the platform, y to its centre line)
+  target_offset_x: 0.0           # [m] landing CoM target relative to the platform centre
+  approach_decel: 1.5            # [m/s^2] planned horizontal deceleration (v_des = sqrt(2 a e))
+  approach_speed_max: 2.0        # [m/s]
+  horizontal_kv: 4.0             # [1/s] horizontal velocity tracking gain
+  horizontal_accel_max: 4.0      # [m/s^2] jets (+ thrust tilt while thrusting)
+  toe_offset: 0.22               # [m] front of the feet ahead of the CoM
+  heel_offset: 0.12              # [m] back of the feet behind the CoM
+  edge_margin_x: 0.15            # [m] keep the toes this far behind the near edge ...
+  edge_margin_z: 0.15            # [m] ... until the soles are this far above the top
+  over_margin: 0.10              # [m] heels this far past the near edge = "over the platform"
+  # vertical (descent onto the platform; braking profile relative to the platform top)
+  target_speed: 0.9              # [m/s] at target_height above the platform
+  target_height: 0.25            # [m]
+  brake_decel_max: 8.0           # [m/s^2]
+  velocity_kp: 8.0               # [1/s]
+  hold_height: 0.35              # [m] hover here (above the top) until over the platform
+  hold_kp: 3.0                   # [1/s]
+  thrust_max: 3200.0             # [N]
+  tilt_cmd_max_deg: 10.0         # thrust-axis lean toward the horizontal force while braking
+  cutoff_height: 0.04            # [m] cut thrust (and at foot contact)
+  # absolute-altitude fusion (controller side): integrated est vz, corrected by
+  # est com_height (+ platform height when the altimeter sees the platform)
+  alt_gate: 0.35                 # [m]
+  alt_gain: 3.0                  # [1/s]
