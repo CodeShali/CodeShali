@@ -144,7 +144,9 @@ def test_render():
     import os
     import subprocess
     import sys
-    env = {k: v for k, v in os.environ.items() if k != "MUJOCO_GL"}
+    # mujoco exports PYOPENGL_PLATFORM to match MUJOCO_GL at import (tests/conftest.py picks
+    # the backend first); drop both so the child selects its backend consistently
+    env = {k: v for k, v in os.environ.items() if k not in ("MUJOCO_GL", "PYOPENGL_PLATFORM")}
     out = subprocess.run([sys.executable, "-c", _RENDER_SCRIPT], capture_output=True,
                          text=True, timeout=120, env=env)
     if "RENDER_OK" not in out.stdout:
