@@ -1,0 +1,292 @@
+# Hardware sizing assumptions for scripts/size_suit.py (suitsim.sizing).
+#
+# CONVENTION: any value written as a 3-list [opt, nom, cons] is an ASSUMPTION RANGE:
+#   opt  = the end of the plausible range that makes the suit lighter / more feasible,
+#   nom  = typical value used for the headline numbers,
+#   cons = the conservative end (heavier / less feasible).
+# The calculator evaluates the whole model three times (optimistic / nominal / conservative),
+# so every mass is reported as "nom [opt - cons]".  Values are typical figures from vendor
+# datasheets and textbooks (Sutton & Biblarz "Rocket Propulsion Elements"; Leishman
+# "Principles of Helicopter Aerodynamics"; composite-cylinder datasheets), not measurements of
+# specific parts — treat them as order-of-magnitude engineering inputs and replace them with
+# datasheet values as soon as real parts are chosen.  Plain scalars are definitions/spec values.
+
+constants:
+  g0: 9.80665              # [m/s^2] standard gravity (Isp definition)
+  g: 9.81                  # [m/s^2] gravity used by the simulator
+  rho_air: 1.225           # [kg/m^3] sea level, 15 C
+
+# ------------------------------------------------------------------------------- mission
+mission:
+  human_mass: 91.0                 # [kg] simulator default wearer
+  spec_suit_mass: 9.0              # [kg] suit mass assumed by the simulator (suit_default.yaml)
+  sim_system_mass: 100.0           # [kg] human + suit mass at which sim budgets were measured
+  wearable_mass_limit: 20.0        # [kg] soft target for a worn emergency system (assumption:
+                                   #   ~20-25 % of body mass, cf. load-carriage guidance)
+  spec_budgets:                    # as written in configs/suit_default.yaml
+    pod_impulse: 2500.0            # [N*s] both lift pods
+    jet_impulse: 600.0             # [N*s] all micro jets
+    battery_wh: 150.0              # [Wh] fan battery
+    fan_peak_power_w: 1200.0       # [W] per fan at 300 N
+  braking:                         # T1 profile (configs/task_drop.yaml, paper eq. profile)
+    v_t: 1.2                       # [m/s] target speed at h_t
+    h_t: 0.3                       # [m]
+    a: 9.0                         # [m/s^2] planning deceleration
+  drop_heights: [0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]   # [m] table of I*(H)
+  design_drop_height: 5.0          # [m] worst T1 drop
+  # Simulated pod impulse / ideal I*(H) over 1000 randomised T1 episodes (paper section 6):
+  # mean 1.07, 5-95th percentile 0.91-1.26.  Used to turn I*(H_max) into a hardware requirement.
+  sim_overhead_vs_ideal: [1.07, 1.15, 1.26]
+  jump:                            # T2 thrust-only estimate (paper section T2)
+    sole_rise: 3.13                # [m] soles must rise this much (2.5 m platform + apex margin)
+    thrust: 2900.0                 # [N] pods + fans during the push
+    leg_push_credit: 225.0         # [N*s] measured saving from the leg push
+    apex_above_platform: 0.63      # [m] braking drop onto the platform after the apex
+  requirement:
+    # results/m7_*_summary.json of the NOMINAL missions (stress tests excluded on purpose)
+    results_dir: results
+    tasks:
+      - m7_t1_baseline
+      - m7_t1_residual
+      - m7_t1_side_jets
+      - m7_t1_pods_fwd
+      - m7_t2_jump
+      - m7_t3_push
+      - m7_t3_push_side_jets
+    statistic: p95                 # per-task statistic used (mean | p95 | max); NOTE max jet use
+                                   #   is clipped at the 600 N*s tank, so it is a lower bound
+    margin: [1.15, 1.25, 1.5]      # design margin on top of the per-mission requirement
+    scale_with_mass: true          # impulse scales ~linearly with system mass (sim was at 100 kg)
+    fallback:                      # used only when the summaries are missing
+      pod_impulse: 1515.0          # [N*s] T1 baseline p95
+      jet_impulse: 560.0           # [N*s] T2 jump p95
+
+# ------------------------------------------------------------------------------- propellants
+# Isp ranges are sea-level effective values (nozzle exit ~1 bar, small thrusters, losses).
+gases:
+  n2:  {R: 296.8, gamma: 1.40}     # [J/(kg K)], cp/cv
+  co2: {R: 188.9, gamma: 1.29}
+
+propellants:
+  n2_cold_gas:
+    kind: cold_gas
+    label: "cold-gas N2 (300 bar)"
+    isp: [73, 68, 60]              # [s] ideal ~73 s at 300 K; blow-down cooling lowers it
+    exhaust_temp_C: "-100 to -150 at the nozzle exit (below ambient)"
+    response: "solenoid 2-10 ms"
+    throttle: "on/off (PWM) or proportional valve"
+  co2_cold_gas:
+    kind: liquefied_gas
+    label: "cold-gas CO2 (liquid, ~57 bar)"
+    isp: [61, 58, 50]              # [s]
+    exhaust_temp_C: "-60 to -80 (dry-ice snow possible)"
+    response: "solenoid 2-10 ms, but flow limited by boiling (tank chills)"
+    throttle: "on/off"
+  solid:
+    kind: solid
+    label: "solid gas generator / small solid motor"
+    isp: [220, 200, 180]           # [s]
+    exhaust_temp_C: "1500-2500 (chamber), particulates"
+    response: "ignition 5-30 ms; NOT throttleable (pulse grains / pintle)"
+    throttle: "none: discrete pulses"
+  h2o2_90:
+    kind: monoprop
+    label: "90 % H2O2 monopropellant"
+    isp: [150, 135, 120]           # [s] sea level, silver/permanganate catalyst
+    exhaust_temp_C: "~600-750 (superheated steam + O2)"
+    response: "10-50 ms warm bed, 100+ ms cold start"
+    throttle: "valve-throttleable"
+  turbojet:
+    kind: airbreathing
+    label: "micro turbojet (kerosene)"
+    # Model-class micro turbines (100-400 N) burn ~0.12-0.18 kg/(N h).  The 0.04-0.05 kg/(N h)
+    # sometimes quoted is LARGE-turbofan territory and does not apply at this scale.
+    tsfc: [0.12, 0.15, 0.18]       # [kg/(N h)]
+    engine_thrust_to_weight: [12, 10, 7]   # [-] incl. ECU, pump, starter
+    spool_up_s: [2, 5, 10]         # [s] idle -> full thrust
+    exhaust_temp_C: "500-750 (EGT), 120-140 dB"
+    response: "seconds (spool-up) - must already be running"
+    throttle: "slow (seconds)"
+
+# ------------------------------------------------------------------------------- storage
+storage:
+  cold_gas:                        # Type-IV composite cylinder (carbon over polymer liner)
+    pressure_bar: 300              # [bar] operating (SCBA / paintball HPA standard)
+    temperature_K: 300             # [K]
+    # Compressibility of N2 at 300 bar, 300 K is ~1.1 (ASSUMPTION: no real-gas EOS used).
+    z: [1.08, 1.10, 1.13]
+    usable_fraction: [0.95, 0.90, 0.85]    # residual gas below the regulator inlet pressure
+    # Performance factor PV/W = P_burst * V / weight  [m]; Type IV: ~25-40 km.
+    performance_factor_m: [40000, 30000, 25000]
+    safety_factor: [1.5, 2.5, 3.0]          # burst / operating (aerospace 1.5; worn SCBA ~3)
+    fixed_mass: [0.15, 0.25, 0.40]          # [kg] valve, burst disc, boss, fill fitting per tank
+  liquefied_co2:
+    pressure_bar: 140              # [bar] design (MEOP ~ vapour pressure at 50 C + margin)
+    fill_density: 680.0            # [kg/m^3] max fill ratio 0.68 kg/L (cylinder regulations)
+    usable_fraction: [0.97, 0.95, 0.90]     # vapour left when the liquid is gone
+    performance_factor_m: [40000, 30000, 25000]
+    safety_factor: [1.5, 2.5, 3.0]
+    fixed_mass: [0.10, 0.20, 0.30]
+    h_vap: 230000.0                # [J/kg] heat of vaporisation (~15-20 C)
+  h2o2:
+    density: 1390.0                # [kg/m^3] 90 % H2O2
+    tank_pressure_bar: [25, 35, 45]          # [bar] regulated feed (chamber ~15-25 bar)
+    ullage: [0.05, 0.10, 0.15]               # [-] of liquid volume
+    # Peroxide-compatible tank (Al 5254/6061 or PTFE/HDPE-lined): lower than Type IV.
+    performance_factor_m: [15000, 10000, 6000]
+    safety_factor: [1.5, 2.0, 2.5]
+    pressurant_bottle_bar: 300     # [bar] N2 bottle feeding the regulator
+    pressurant_z: [1.08, 1.10, 1.13]
+    fixed_mass: [0.20, 0.35, 0.60] # [kg] regulator, fill/vent, burst disc, check valve
+  solid:
+    # Propellant mass fraction = propellant / loaded motor; small motors sit at the low end,
+    # and segmenting into many pulses lowers it further.
+    propellant_mass_fraction: [0.80, 0.70, 0.60]
+
+# ------------------------------------------------------------------------------- thrusters
+thrusters:
+  micro_jet:
+    thrust: 40.0                   # [N] spec
+    chamber_pressure_bar: [20, 15, 10]       # [bar] regulated plenum at the valve
+    chamber_pressure_sweep_bar: [5, 10, 20, 50]
+    thrust_coefficient: [1.6, 1.5, 1.4]      # [-] C_F, small conical nozzle at sea level
+    gas_temperature_K: [300, 280, 240]       # [K] after regulator / blow-down cooling
+    valve_nozzle_mass: [0.030, 0.055, 0.080] # [kg] per jet: fast solenoid + nozzle + mount
+    valve_response_ms: [2, 5, 10]
+    min_on_time_ms: [2, 5, 10]
+    driver_wiring_mass: [0.005, 0.010, 0.020]  # [kg] per jet: MOSFET channel + wire run
+    peak_simultaneous_frac: [0.15, 0.25, 0.40] # fraction of jets firing at full thrust at once
+  plumbing:
+    tube_length_per_jet: [0.4, 0.6, 0.9]     # [m] feed line from manifold to each jet
+    tube_mass_per_m: [0.008, 0.015, 0.030]   # [kg/m] 4-6 mm nylon/PTFE/braided at <= 20 bar
+    fitting_mass_per_jet: [0.004, 0.008, 0.015]  # [kg]
+    manifold_mass: [0.10, 0.20, 0.40]        # [kg] distribution blocks
+    regulator_mass: [0.15, 0.30, 0.60]       # [kg] high-flow 300 bar -> 10-20 bar regulator
+  pods:
+    thrust: 1500.0                 # [N] per pod (spec)
+    hardware_mass:                 # [kg] PER POD, excluding propellant/tank/casing
+      solid: [0.10, 0.25, 0.50]        # mount, igniter / initiator electronics, blast tube
+      monoprop: [0.30, 0.50, 0.80]     # catalyst-bed thruster + main valve (1.5 kN)
+      cold_gas: [0.20, 0.40, 0.80]     # large-bore valve + nozzle (1.5 kN cold gas!)
+  airbags:
+    note: "inflators are cold-gas or pyrotechnic (automotive/motorcycle style)"
+
+# ------------------------------------------------------------------------------- fans
+fans:
+  n: 2
+  thrust: 300.0                    # [N] per fan (spec)
+  duct_diameter: [0.25, 0.20, 0.15]          # [m] wearable-size ducts
+  diameter_sweep: [0.15, 0.20, 0.25, 0.30]   # [m] table only
+  figure_of_merit: [0.75, 0.70, 0.60]        # [-] P_ideal / P_shaft for small ducted fans
+  motor_esc_efficiency: [0.92, 0.88, 0.82]   # [-]
+  motor_specific_power: [10000, 7000, 5000]  # [W/kg] shaft power per kg of motor + ESC
+  fan_duct_mass: [0.30, 0.50, 0.80]          # [kg] rotor + duct + mount per fan (excl. motor)
+  battery_specific_energy: [250, 200, 150]   # [Wh/kg] pack level
+  battery_specific_power: [5000, 3500, 2000] # [W/kg] pack level, burst
+
+# ------------------------------------------------------------------------------- rest of suit
+other_mass:                        # [kg]; spec values in suit_default.yaml are the 'nom' column
+  airbags: [1.0, 1.5, 2.5]         # 3 bags + inflators (spec 1.5)
+  compute_sensors: [0.6, 1.0, 1.5] # flight computer, 15 IMUs, radar altimeter, foot sensors,
+                                   #   avionics battery (spec 1.0)
+  frame: [1.5, 2.5, 4.0]           # tube frame + harness carrying 3 kN into the pelvis (spec 1.5)
+  shell: [1.0, 2.0, 3.0]           # protective shell (spec 2.0)
+
+# ------------------------------------------------------------------------------- architectures
+# impulse: a number [N*s], "spec" (suit_default budgets) or "required" (derived requirement).
+architectures:
+  A:
+    name: "Spec as written: solid pulse pods + 40 cold-gas jets + 2 electric fans"
+    pods: {propellant: solid, n: 2, impulse: spec}
+    jets: {propellant: n2_cold_gas, n: 40, impulse: spec}
+    fans: true
+    other: [airbags, compute_sensors, frame, shell]
+  B:
+    name: "Recommended: solid pulse pods + 48 cold-gas N2 jets (incl. 4 side jets), no fans"
+    pods: {propellant: solid, n: 2, impulse: required}
+    jets: {propellant: n2_cold_gas, n: 48, impulse: required}
+    fans: false
+    other: [airbags, compute_sensors, frame, shell]
+  C:
+    name: "Throttleable: 90 % H2O2 pods + 48 cold-gas N2 jets, no fans"
+    pods: {propellant: h2o2_90, n: 2, impulse: required}
+    jets: {propellant: n2_cold_gas, n: 48, impulse: required}
+    fans: false
+    other: [airbags, compute_sensors, frame, shell]
+  D:
+    name: "Fall-protection MVP: airbags + 2 small solid pulse pods (1-2 m falls)"
+    pods: {propellant: solid, n: 2, impulse: mvp}
+    jets: null
+    fans: false
+    other: [airbags, compute_sensors]
+    other_override:                # lighter harness/compute for the MVP [kg]
+      compute_sensors: [0.3, 0.5, 0.8]   # 1-2 IMUs + altimeter + MCU
+      harness: [0.5, 0.8, 1.2]           # vest/belt harness carrying 2 pods
+    mvp:
+      drop_height: 2.0             # [m]
+      drop_heights: [1.0, 1.5, 2.0]
+      impact_speed: 2.0            # [m/s] target (sim T1 limit is 2.0 m/s)
+      decel: [25, 20, 15]          # [m/s^2] braking accel of the pulse (2-2.5 g net)
+      margin: [1.15, 1.25, 1.5]
+
+# ------------------------------------------------------------------------------- embedded
+embedded:
+  control_period_ms: 2.0           # 500 Hz loop (suit_default sim.control_dt)
+  allocator_budget_frac: 0.3       # allocator may use this share of the period
+  x86_ms_per_call_reference: 0.52  # [ms] paper: warm-started active set, Python/NumPy, Xeon
+  n_wrench_rows: 6
+  # Linear solves per call: warm-started at 500 Hz the active set changes little (a few solves);
+  # a cold start can take up to pdas_max_iter = 25 (suitsim/control/fast_allocation.py).
+  active_set_iterations: [3, 8, 25]
+  # Dense flop model per call: 2 m n^2 (Gram matrix) + iters * (n^3/3 + 4 n^2) (one Cholesky
+  # solve of the free set per iteration, worst case all n free).
+  platforms:                       # effective sustained MFLOP/s in compiled C (ASSUMPTION)
+    "Teensy 4.1 (Cortex-M7 600 MHz), float64": [200, 120, 60]
+    "Teensy 4.1 (Cortex-M7 600 MHz), float32": [600, 400, 200]
+    "STM32H7 (Cortex-M7 480 MHz), float32": [480, 300, 150]
+    "Jetson Orin Nano (Cortex-A78AE), C/float64": [4000, 2000, 1000]
+
+# ------------------------------------------------------------------------------- costs
+# Rough order-of-magnitude USD (2025-26 hobby/industrial catalogue prices), NOT quotes.
+costs:
+  bom_B:                           # recommended architecture B, prototype quantities
+    - {item: "fast solenoid valves (2-5 ms, >=6 mm orifice @ 15-20 bar)", qty: n_jets, unit: [40, 300]}
+    - {item: "machined/printed-metal micro nozzles", qty: n_jets, unit: [10, 80]}
+    - {item: "Type-IV 300 bar cylinder (~3-5 L, SCBA/paintball class)", qty: 1, unit: [300, 1200]}
+    - {item: "high-flow 300 bar regulator + relief + burst disc", qty: 1, unit: [150, 800]}
+    - {item: "tubing, fittings, manifolds", qty: 1, unit: [150, 600]}
+    - {item: "valve driver boards (MOSFET, flyback, current sense)", qty: n_jets, unit: [3, 20]}
+    - {item: "solid pulse pods (custom gas generators, dev + certification)", qty: 2, unit: [2000, 25000]}
+    - {item: "airbags + inflators (motorcycle-vest class)", qty: 1, unit: [400, 1500]}
+    - {item: "IMUs (15)", qty: 15, unit: [10, 60]}
+    - {item: "radar altimeter", qty: 1, unit: [100, 600]}
+    - {item: "flight computer (MCU + Jetson-class)", qty: 1, unit: [80, 700]}
+    - {item: "frame, harness, shell (prototype)", qty: 1, unit: [500, 5000]}
+  # Phase 1 first purchases, weeks 1-4 (2-person team; cold-gas single jet + 8-jet module).
+  phase1_purchases:
+    - {week: 1, item: "load cell 100-200 N S-beam + 24-bit/high-rate amplifier (single-jet stand)", qty: 1, unit: [80, 400]}
+    - {week: 1, item: "DAQ >= 1 kHz/ch (10 kHz preferred), 16-bit, >= 8 ch (LabJack T7 / NI USB-6000 class)", qty: 1, unit: [300, 1500]}
+    - {week: 1, item: "pressure transducers: 0-400 bar (tank) + 0-25 bar (plenum), >= 1 kHz", qty: 2, unit: [60, 400]}
+    - {week: 1, item: "type-K thermocouples + amplifier (tank / plenum gas temperature)", qty: 2, unit: [15, 60]}
+    - {week: 1, item: "candidate fast solenoid valves (2-3 models, 2-5 ms, >= 4-6 mm orifice)", qty: 6, unit: [40, 300]}
+    - {week: 1, item: "test nozzles, 3 throat sizes (3, 4, 5.5 mm)", qty: 6, unit: [10, 80]}
+    - {week: 1, item: "300 bar Type-IV cylinder (3-5 L) + fill adapter", qty: 1, unit: [300, 1200]}
+    - {week: 1, item: "300 bar -> 5-25 bar high-flow regulator + relief valve + burst disc + bleed valve", qty: 1, unit: [150, 800]}
+    - {week: 1, item: "N2 supply: cylinder rental / fills (or scuba/HPA compressor access)", qty: 1, unit: [100, 600]}
+    - {week: 1, item: "stand frame (aluminium extrusion) + 10 mm polycarbonate shield", qty: 1, unit: [200, 1000]}
+    - {week: 1, item: "PPE: hearing protection, face shields, cryo gloves, safety glasses", qty: 1, unit: [50, 200]}
+    - {week: 2, item: "Teensy 4.1 + MOSFET valve-driver board (8 ch, flyback, current sense)", qty: 1, unit: [60, 250]}
+    - {week: 2, item: "precision scale 0.1 g / 10 kg (tank mass loss -> Isp)", qty: 1, unit: [100, 600]}
+    - {week: 3, item: "8 more valves + nozzles of the selected model (8-jet module)", qty: 8, unit: [50, 380]}
+    - {week: 3, item: "manifold block + 6 mm feed lines + fittings (8-jet module)", qty: 1, unit: [100, 400]}
+    - {week: 4, item: "6-axis force/torque sensor (or 3-4 load-cell plate) for the module wrench map", qty: 1, unit: [400, 4000]}
+    - {week: 4, item: "high-speed camera >= 1000 fps (optional; phone slow-mo as fallback)", qty: 1, unit: [0, 3000]}
+  # Lift-pod stand (weeks 5-10); paperwork starts in week 1 because of licensing lead times.
+  pod_stand_purchases:
+    - {item: "5 kN load cell + amplifier (pod stand)", qty: 1, unit: [150, 900]}
+    - {item: "steel pod stand, ground anchors, sandbag/concrete barricade", qty: 1, unit: [500, 2500]}
+    - {item: "remote firing system: key-switch arm, continuity check, >= 15 m cable / RF with interlock", qty: 1, unit: [150, 800]}
+    - {item: "chamber pressure transducer 0-200 bar, >= 10 kHz", qty: 1, unit: [150, 600]}
+    - {item: "certified commercial G-H class motors / gas generators as surrogate charges", qty: 10, unit: [20, 120]}
+    - {item: "OR peroxide path: catalyst-bed 1.5 kN thruster + peroxide-grade valve + passivated tank", qty: 1, unit: [3000, 20000]}
+    - {item: "fire extinguishers (ABC + water), deluge water supply, first-aid / burn kit", qty: 1, unit: [150, 500]}
