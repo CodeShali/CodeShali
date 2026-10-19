@@ -1,0 +1,68 @@
+# Hardware-realistic suit variant (physics review): what can actually be built today.
+#   * no ducted fans: 300 N from a ~20 cm duct needs ~20-30 kW (momentum theory; 1.2 kW gives
+#     ~50 N), so they are removed;
+#   * micro jets = cold-gas N2 through on/off solenoid valves (not proportional), Isp 70 s;
+#   * lift pods = solid gas-generator PULSE charges (non-throttleable, cannot be stopped),
+#     2 pods x 8 charges x 156 N*s = 2496 N*s, Isp 200 s;
+#   * propellant mass is carried and burnt (m = I / (Isp g0)), dry masses raised to
+#     realistic values.
+# Everything else (human, sensors, estimator, allocation, thruster layout) = suit_default.yaml.
+base: suit_default.yaml
+suit:
+  # Suit point masses [kg] (dry). Propellant is added on top from suit.propellant:
+  #   jets 600 N*s / (70 s * g0) = 0.874 kg N2 (torso), pods 2496 / (200 g0) = 1.273 kg (pelvis).
+  # Total at start: 13.0 dry + 2.15 propellant = 15.15 kg.
+  masses:
+    hip_pods: null                                   # replaced by the items below
+    pod_casings:  {total: 2.5, bodies: [pelvis]}     # 16 charge casings + pod mounts / igniters
+    jet_tank:     {total: 4.0, bodies: [torso]}      # N2 COPV tank + regulator + valves + manifold
+    tube_frame:   {total: 1.5, bodies: [torso, thigh_l, thigh_r, shin_l, shin_r, upper_arm_l, upper_arm_r, lower_arm_l, lower_arm_r]}
+    airbags:      {total: 1.5, bodies: [torso]}
+    compute:      {total: 1.5, bodies: [torso]}      # compute + battery
+    shell:        {total: 2.0, bodies: [pelvis, torso, thigh_l, thigh_r, shin_l, shin_r, upper_arm_l, upper_arm_r]}
+
+  propellant_mass_tracking: true    # body masses drop as the impulse is used
+  propellant:
+    impulse_gas_pods: {propellant_isp: 200.0, body: pelvis}   # [s] solid gas generator
+    impulse_gas_jets: {propellant_isp: 70.0,  body: torso}    # [s] cold N2
+
+  actuator_classes:
+    fan: null                       # removed (see header)
+    # Solid pulse charges. Burn thrust = charge_impulse / burn_time = 1500 N (= f_max, the
+    # allocator's per-pod bound). Default scheduler 'auto' turns the continuous allocator
+    # command into ignitions (thrusters.py); tau is unused for pulse classes.
+    lift_pod:
+      f_max: 1500.0
+      tau: 0.005
+      budget: impulse_gas_pods
+      alloc_lambda: 1.0e-2
+      solid_pulses:
+        charges_per_pod: 8
+        charge_impulse: 156.0       # [N*s]
+        burn_time: 0.104            # [s]
+        ignition_delay: 0.010       # [s] igniter command -> pressure
+        scheduler: auto             # auto | manual (controller calls ThrusterBank.ignite)
+        trigger_fraction: 0.5       # ignite when the commanded impulse reaches 0.5 charge
+        accumulator_limit: 1.0      # [charges] clamp of the commanded-impulse accumulator
+        max_concurrent: 1           # charges burning at once per pod
+    # Cold-gas N2 jets on solenoid valves: 0 or 40 N, sigma-delta modulated at 1 kHz.
+    micro_jet:
+      f_max: 40.0
+      tau: 0.005
+      budget: impulse_gas_jets
+      alloc_lambda: 1.0e-1
+      valve:
+        type: onoff
+        min_on_time: 0.005          # [s]
+        min_off_time: 0.0           # [s]
+        open_delay: 0.003           # [s]
+        close_delay: 0.003          # [s]
+        rise_tau: 0.001             # [s] chamber pressure rise / tail-off
+
+  budgets:
+    impulse_gas_pods: 2496.0        # [N*s] = 2 pods x 8 charges x 156 N*s (derived from the charges)
+    impulse_gas_jets: 600.0         # [N*s] N2
+
+  thrusters:
+    fan_l: null
+    fan_r: null

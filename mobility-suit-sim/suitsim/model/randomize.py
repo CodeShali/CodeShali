@@ -8,7 +8,7 @@ from __future__ import annotations
 import mujoco
 import numpy as np
 
-from suitsim.interfaces import GROUND_GEOM, SEGMENTS, load_config
+from suitsim.interfaces import GROUND_GEOM, SEGMENTS, load_config, suit_mass_items
 from suitsim.model.airbags import airbag_geom_ids
 
 
@@ -33,10 +33,8 @@ class ModelRandomizer:
         cfg = cfg if cfg is not None else load_config()
         r = float(cfg["human"]["geometry"]["suit_mass_radius"])
         self.suit_mass = np.zeros(model.nbody)
-        for spec in cfg["suit"]["masses"].values():
-            share = float(spec["total"]) / len(spec["bodies"])
-            for b in spec["bodies"]:
-                self.suit_mass[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, b)] += share
+        for _, b, share in suit_mass_items(cfg):     # dry suit + full-load propellant
+            self.suit_mass[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, b)] += share
         self.suit_inertia = np.repeat((0.4 * self.suit_mass * r ** 2)[:, None], 3, axis=1)
         self.mass_scale = 1.0
 

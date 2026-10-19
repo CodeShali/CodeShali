@@ -12,7 +12,7 @@ from typing import Any, Callable, Iterable, Sequence
 
 import numpy as np
 
-from suitsim.interfaces import BUDGET_KEYS, EPISODE_INFO_KEYS
+from suitsim.interfaces import BUDGET_KEYS, EPISODE_INFO_KEYS, budget_capacity
 
 # Defaults mirror configs/task_drop.yaml::safe_landing
 DEFAULT_SAFE_LIMITS = {"max_vertical_speed": 2.0, "max_horizontal_speed": 1.0,
@@ -34,6 +34,11 @@ CONTINUOUS_KEYS: tuple[str, ...] = (
     "impulse_gas_pods", "impulse_gas_jets", "battery_wh", "episode_time",
 )
 _ABS_KEYS = ("impact_v_vertical", "impact_v_horizontal")
+# reported only when the episodes carry them (hardware-realistic propulsion options)
+OPTIONAL_KEYS: tuple[str, ...] = (
+    "propellant_kg", "propellant_kg_pods", "propellant_kg_jets", "total_mass_end",
+    "pulse_charges_used", "pulse_first_ignition_t", "valve_pulses",
+)
 
 
 # --------------------------------------------------------------------------------------
@@ -92,6 +97,10 @@ def budgets_from_cfg(cfg: dict | None) -> dict:
     b = ((cfg or {}).get("suit") or {}).get("budgets") or {}
     out = dict(DEFAULT_BUDGETS)
     out.update({k: float(b[k]) for k in BUDGET_KEYS if k in b})
+    suit = (cfg or {}).get("suit") or {}
+    if suit.get("thrusters") and suit.get("actuator_classes"):
+        # a solid-pulse budget holds exactly its charges (interfaces.budget_capacity)
+        out.update({k: budget_capacity(cfg, k) for k in BUDGET_KEYS if k in b})
     return out
 
 
@@ -205,6 +214,9 @@ def summarize(results: Sequence[dict], cfg: dict | None = None,
         if key in _ABS_KEYS:
             vals = [abs(v) for v in vals]
         stats[key] = describe(vals)
+    for key in OPTIONAL_KEYS:
+        if any(key in r for r in results):
+            stats[key] = describe(_f(r.get(key)) for r in results)
     # landed-only impact stats (timeouts have no meaningful impact speed)
     landed = [r for r in results if str(r.get("first_contact", "none")) != "none"]
     for key in ("impact_v_vertical", "impact_v_horizontal", "tilt_at_impact_deg"):

@@ -1,0 +1,6 @@
+# T3 push recovery with the hardware-realistic suit (configs/suit_realistic.yaml: no fans, on/off cold-gas
+# jets, solid pulse pods, propellant mass depletion, realistic dry masses).
+# Multi-parent base: the task first, then the suit variant on top (the tasks override no
+# suit_default key, so nothing of the task is lost — tests/test_propulsion.py checks this).
+# Controller gains are the default ones (unchanged).
+base: [task_push.yaml, suit_realistic.yaml]

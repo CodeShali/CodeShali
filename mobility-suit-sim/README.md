@@ -92,6 +92,10 @@ configs/                 YAML configs (all physical parameters, gains, task defi
   train_ppo.yaml           PPO hyper-parameters and training-only reward overrides
   suit_variant_*.yaml      thruster layout variants (side jets, pods forward)
   task_*_side_jets.yaml, task_drop_pods_fwd.yaml   tasks with those variants applied
+  suit_realistic.yaml      hardware-realistic suit: no fans, on/off-valve cold-gas jets, solid
+                           pulse pods, propellant mass depletion, realistic dry masses
+  suit_realistic_peroxide.yaml   same with throttleable H2O2 pods (tau 30 ms, Isp 130 s)
+  task_{drop,jump,push}_realistic[_peroxide].yaml   T1-T3 on the realistic suits
 suitsim/
   interfaces.py            shared contract: names, keys, config loading, thruster specs, metadata
   model/                   procedural MJCF builder, posture, airbags, domain randomisation
@@ -114,9 +118,11 @@ runs/                    scratch output of every script (git-ignored)
 
 * **Every physical parameter, gain and limit lives in YAML**; code only holds cosmetic
   values (colours, camera). Comment units next to each value.
-* Configs chain with a single `base:` key (path relative to the file); the child is
-  deep-merged over its base. Dict entries merge key by key, lists are replaced. Thrusters are
-  a name-keyed dict, so a variant can move one (`pod_l: {pos: ...}`) or append new ones.
+* Configs chain with a `base:` key (path relative to the file) — a single path or a list
+  `base: [task_drop.yaml, suit_realistic.yaml]`, merged in order; the child is deep-merged
+  over its base(s). Dict entries merge key by key, lists are replaced. Thrusters are a
+  name-keyed dict, so a variant can move one (`pod_l: {pos: ...}`), append new ones, or
+  remove one (`fan_l: null`; a `null` actuator class or mass item is removed too).
 * Any script takes `--set a.b.c=value` (value parsed as YAML) for one-off overrides, e.g.
   `--set task.push_force=500` or `--set task.fixed.drop_height=3.0`.
 * Controllers consume only sensor / estimator dicts, never MuJoCo ground truth (ground

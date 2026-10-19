@@ -1,0 +1,19 @@
+# Realistic suit, peroxide-pod variant: the lift pods are throttleable H2O2 monopropellant
+# thrusters (catalyst bed) instead of solid pulse charges — continuous command, slower
+# response (tau 30 ms), lower Isp (130 s): 2500 N*s needs 2500 / (130 g0) = 1.961 kg of
+# peroxide plus a 2.0 kg dry tank + valve + catalyst-thruster system (replaces the 2.5 kg
+# solid-charge casings). Jets, fans (none) and the rest = suit_realistic.yaml.
+# Total at start: 12.5 dry + 1.961 + 0.874 propellant = 15.33 kg.
+base: suit_realistic.yaml
+suit:
+  masses:
+    pod_casings: null
+    peroxide_system: {total: 2.0, bodies: [pelvis]}   # H2O2 tank + pressurant + valves + thrusters
+  propellant:
+    impulse_gas_pods: {propellant_isp: 130.0, body: pelvis}   # [s] 90 % H2O2 monoprop
+  actuator_classes:
+    lift_pod:
+      tau: 0.030                    # [s] catalyst-bed / valve throttle response
+      solid_pulses: null            # throttleable
+  budgets:
+    impulse_gas_pods: 2500.0        # [N*s]

@@ -56,13 +56,14 @@ import mujoco  # noqa: E402
 import numpy as np  # noqa: E402
 
 from suitsim.actuators import ThrusterBank, apply_thrusters, body_drag_wrench, thruster_ids
+from suitsim.actuators.propellant import PropellantTracker
 from suitsim.control.allocation import Allocator
 from suitsim.control.fast_allocation import FastAllocator
 from suitsim.control.baseline import BaselineLandingController
 from suitsim.estimation import StateEstimator
 from suitsim.interfaces import (
-    BUDGET_KEYS, FEET, GROUND_GEOM, HEAD_TORSO_BODIES, ROOT_BODY, THRUSTER_CLASSES,
-    TORSO_BODY, ControlOutput, load_thruster_specs,
+    BUDGET_KEYS, FEET, G0, GROUND_GEOM, HEAD_TORSO_BODIES, ROOT_BODY, THRUSTER_CLASSES,
+    TORSO_BODY, ControlOutput, load_thruster_specs, propellant_specs, propellant_tracking,
 )
 from suitsim.model import AirbagState, ModelRandomizer, build_model, model_info
 from suitsim.sensors import SensorSuite
@@ -117,6 +118,11 @@ class SuitEnvBase(gym.Env):
         solver = str((cfg.get("allocation", {}) or {}).get("solver", "active_set"))
         self.allocator = (FastAllocator if solver == "active_set" else Allocator)(self.specs, cfg)
         self.randomizer = ModelRandomizer(self.model, cfg)
+        # propellant mass (suit.propellant): reported always, depleted in the model only with
+        # suit.propellant_mass_tracking (composes with the randomiser, see _apply_dr_common)
+        self.prop_specs = propellant_specs(cfg)
+        self.propellant = (PropellantTracker.from_config(self.model, cfg)
+                           if self.prop_specs and propellant_tracking(cfg) else None)
         self.airbag_state = AirbagState(self.model, cfg)
         self.controller = None if controller == "none" else BaselineLandingController(
             cfg, self.specs, geometry_fn=self.estimator.thruster_geometry)
@@ -203,7 +209,9 @@ class SuitEnvBase(gym.Env):
             sf = np.full(n, float(fixed["fmax_scale"]))
         if "tau_scale" in fixed:
             st = np.full(n, float(fixed["tau_scale"]))
-        self.randomizer.apply(mass_scale, friction)
+        self.randomizer.apply(mass_scale, friction)     # full tanks (nominal suit masses)
+        if self.propellant is not None:
+            self.propellant.capture()                    # this episode's full-load state
         self.thrusters.reset(scale_fmax=sf, scale_tau=st)
         self._noise_scale = noise
         return {"mass_scale": mass_scale, "friction": friction, "noise_scale": noise,
@@ -240,6 +248,8 @@ class SuitEnvBase(gym.Env):
         ss = np.random.SeedSequence(int(self.np_random.integers(2 ** 63)))
         r_task, r_sens, r_est = (np.random.default_rng(s) for s in ss.spawn(3))
         mujoco.mj_resetData(self.model, self.data)
+        if self.propellant is not None:
+            self.propellant.restore()                    # refill (before the DR draw)
         self.airbag_state.stow(self.model)
         self.params = self._sample_episode(r_task)
         d = self.data
@@ -310,6 +320,8 @@ class SuitEnvBase(gym.Env):
         m, d = self.model, self.data
         self.airbag_state.step(m, self.dt_phys)
         f = self.thrusters.step(self.u)
+        if self.propellant is not None:
+            self.propellant.update(self.thrusters.used())   # mass for the coming mj_step
         apply_thrusters(m, d, self.site_ids, self.body_ids, f, out=self._xfrc)
         self._xfrc[self.root_id, :3] += self._drag
         d.xfrc_applied[:] = self._xfrc
@@ -405,10 +417,32 @@ class SuitEnvBase(gym.Env):
             "alloc_calls": self.n_alloc,
             "alloc_residual_mean": self.alloc_residual_sum / max(self.n_alloc, 1),
         }
+        info.update(self._propulsion_info(used))
         info.update(self._task_info())
         if self.log_trajectory:
             info["trajectory"] = list(self.traj)
         return info
+
+    def _propulsion_info(self, used: dict) -> dict:
+        """Extra info of the hardware-realistic propulsion options (empty for the default
+        suit, so its results files are unchanged)."""
+        out: dict = {}
+        if self.prop_specs:
+            tot = 0.0
+            for ps in self.prop_specs:
+                kg = float(used[ps.budget]) / (ps.isp * G0)
+                out[f"propellant_kg_{ps.budget.replace('impulse_gas_', '')}"] = kg
+                tot += kg
+            out["propellant_kg"] = tot
+            out["propellant_mass_tracked"] = self.propellant is not None
+            out["total_mass_end"] = float(self.model.body_subtreemass[self.root_id])
+        if self.thrusters.idx_pulse.size:
+            out["pulse_charges_used"] = self.thrusters.charges_used()
+            log = self.thrusters.ignition_log()
+            out["pulse_first_ignition_t"] = float(log[0][0]) if log else float("nan")
+        if self.thrusters.idx_valve.size:
+            out["valve_pulses"] = self.thrusters.valve_pulses()
+        return out
 
     # ------------------------------------------------------------------ rendering
     def render(self):

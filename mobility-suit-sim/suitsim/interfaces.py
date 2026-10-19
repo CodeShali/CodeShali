@@ -155,7 +155,14 @@ def deep_merge(base: dict, override: dict) -> dict:
 def load_config(path: str | Path = CONFIG_DIR / "suit_default.yaml",
                 overrides: dict | None = None) -> dict:
     """Load a YAML config, resolving a ``base:`` chain (relative to the file) and merging
-    ``overrides`` on top."""
+    ``overrides`` on top.
+
+    ``base`` is a single path or a list of paths.  A list is merged in order: each base is
+    fully resolved (its own chain included) and deep-merged over the previous ones, then the
+    file itself goes on top — ``base: [task_drop.yaml, suit_realistic.yaml]`` is the drop task
+    with the realistic suit (keys the later base also defines win, so put the base whose
+    values must survive last).
+    """
     path = Path(path)
     if not path.is_absolute() and not path.exists():
         path = CONFIG_DIR / path
@@ -163,7 +170,11 @@ def load_config(path: str | Path = CONFIG_DIR / "suit_default.yaml",
         cfg = yaml.safe_load(f) or {}
     base = cfg.pop("base", None)
     if base:
-        cfg = deep_merge(load_config(path.parent / base), cfg)
+        bases = [base] if isinstance(base, (str, Path)) else list(base)
+        merged: dict = {}
+        for b in bases:
+            merged = deep_merge(merged, load_config(path.parent / b))
+        cfg = deep_merge(merged, cfg)
     return deep_merge(cfg, overrides or {})
 
 
@@ -212,11 +223,20 @@ class ThrusterSpec:
 
 
 def load_thruster_specs(cfg: dict) -> list[ThrusterSpec]:
-    """Ordered thruster list (YAML order). This order indexes every thruster array."""
+    """Ordered thruster list (YAML order). This order indexes every thruster array.
+
+    A thruster entry set to ``null`` (e.g. ``fan_l: null`` in a variant config) is removed;
+    so is every thruster whose class is ``null`` / absent from ``actuator_classes`` or has
+    ``count: 0``.
+    """
     classes = cfg["suit"]["actuator_classes"]
     specs = []
     for name, t in cfg["suit"]["thrusters"].items():
-        c = classes[t["cls"]]
+        if t is None:
+            continue
+        c = classes.get(t["cls"])
+        if c is None or int(c.get("count", 1)) == 0:
+            continue
         d = np.asarray(t["dir"], dtype=float)
         specs.append(ThrusterSpec(
             name=name, cls=t["cls"], body=t["body"],
@@ -226,6 +246,88 @@ def load_thruster_specs(cfg: dict) -> list[ThrusterSpec]:
             alloc_lambda=float(c["alloc_lambda"]),
         ))
     return specs
+
+
+G0 = 9.80665   # [m/s^2] standard gravity: propellant mass = impulse / (Isp * G0)
+
+
+@dataclass(frozen=True)
+class PropellantSpec:
+    """Propellant of one gas budget (``suit.propellant.<budget>``)."""
+    budget: str              # one of BUDGET_KEYS (gas budgets only)
+    body: str                # segment carrying the tank / charges
+    isp: float               # [s] specific impulse (propellant_isp)
+    mass: float              # [kg] full-load propellant mass = capacity / (isp * G0)
+
+
+def propellant_specs(cfg: dict) -> list[PropellantSpec]:
+    """Propellant carried for each gas budget listed under ``suit.propellant`` (empty if the
+    section is absent — the default suit models no propellant mass).
+
+    ``suit.propellant.<budget> = {propellant_isp: [s], body: segment}``; the full-load mass is
+    the budget capacity divided by ``propellant_isp * G0``.  The capacity of a solid-pulse
+    budget is its total charge impulse (see :func:`budget_capacity`).
+    """
+    suit = cfg["suit"]
+    out = []
+    for key, p in (suit.get("propellant") or {}).items():
+        if p is None:
+            continue
+        if key not in BUDGET_KEYS or key == "battery_wh":
+            raise ValueError(f"suit.propellant: {key!r} is not a gas budget")
+        isp = float(p["propellant_isp"])
+        out.append(PropellantSpec(budget=key, body=str(p["body"]), isp=isp,
+                                  mass=budget_capacity(cfg, key) / (isp * G0)))
+    return out
+
+
+def propellant_tracking(cfg: dict) -> bool:
+    """``suit.propellant_mass_tracking``: deplete the propellant mass as impulse is used."""
+    return bool(cfg["suit"].get("propellant_mass_tracking", False))
+
+
+def solid_pulse_total_impulse(cfg: dict, budget: str) -> float | None:
+    """Total charge impulse [N*s] of the solid-pulse thrusters on ``budget`` (None if the
+    budget is not fed by solid-pulse classes)."""
+    classes = cfg["suit"]["actuator_classes"]
+    total, any_pulse, other = 0.0, False, False
+    for t in (cfg["suit"]["thrusters"] or {}).values():
+        if t is None:
+            continue
+        c = classes.get(t["cls"])
+        if c is None or int(c.get("count", 1)) == 0 or c["budget"] != budget:
+            continue
+        sp = c.get("solid_pulses")
+        if sp:
+            any_pulse = True
+            total += int(sp["charges_per_pod"]) * float(sp["charge_impulse"])
+        else:
+            other = True
+    if any_pulse and other:
+        raise ValueError(f"budget {budget!r} mixes solid-pulse and throttled thrusters")
+    return total if any_pulse else None
+
+
+def budget_capacity(cfg: dict, key: str) -> float:
+    """Capacity of a budget: ``suit.budgets[key]``, except that a budget fed only by
+    solid-pulse thrusters holds exactly its charges (charges_per_pod * charge_impulse * pods)."""
+    sp = solid_pulse_total_impulse(cfg, key) if key != "battery_wh" else None
+    return float(sp) if sp is not None else float(cfg["suit"]["budgets"][key])
+
+
+def suit_mass_items(cfg: dict) -> list[tuple[str, str, float]]:
+    """``(item, body, mass_kg)`` of every suit point mass: ``suit.masses`` entries split evenly
+    over their bodies (``null`` entries are skipped) plus one ``propellant_<budget>`` item per
+    :func:`propellant_specs` entry (full load)."""
+    out = []
+    for item, spec in cfg["suit"]["masses"].items():
+        if spec is None:
+            continue
+        share = float(spec["total"]) / len(spec["bodies"])
+        out += [(item, b, share) for b in spec["bodies"]]
+    for p in propellant_specs(cfg):
+        out.append((f"propellant_{p.budget}", p.body, p.mass))
+    return out
 
 
 # --------------------------------------------------------------------------------------

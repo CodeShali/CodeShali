@@ -19,7 +19,7 @@ import numpy as np
 from suitsim.interfaces import (
     ALTIMETER_SITE, DEFAULT_MJCF, FEET, GROUND_GEOM, ROOT_BODY, SEGMENTS, airbag_geom,
     foot_sole_site, foot_touch_sensor, imu_accel_sensor, imu_gyro_sensor, imu_site,
-    load_config, load_thruster_specs, thruster_site,
+    load_config, load_thruster_specs, suit_mass_items, thruster_site,
 )
 
 # ---------------------------------------------------------------------------------------
@@ -119,10 +119,8 @@ def _build_tree(cfg: dict) -> ET.Element:
 
     # suit masses per body
     suit_by_body: dict[str, list[tuple[str, float]]] = {}
-    for item, spec in suit["masses"].items():
-        share = float(spec["total"]) / len(spec["bodies"])
-        for b in spec["bodies"]:
-            suit_by_body.setdefault(b, []).append((item, share))
+    for item, b, share in suit_mass_items(cfg):       # incl. propellant (suit.propellant)
+        suit_by_body.setdefault(b, []).append((item, share))
     thr_by_body: dict[str, list] = {}
     for s in load_thruster_specs(cfg):
         thr_by_body.setdefault(s.body, []).append(s)
@@ -324,7 +322,7 @@ def model_info(model: mujoco.MjModel, cfg: dict | None = None) -> dict:
         return mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, n)
 
     body_ids = {s: mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, s) for s in SEGMENTS}
-    suit_mass = float(sum(float(v["total"]) for v in cfg["suit"]["masses"].values()))
+    suit_mass = float(sum(m for _, _, m in suit_mass_items(cfg)))   # dry + full propellant
     total = float(sum(model.body_mass))
     return {
         "joint_names": names,

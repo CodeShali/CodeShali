@@ -1,0 +1,3 @@
+# T3 push recovery with the realistic suit, peroxide-pod variant (configs/suit_realistic_peroxide.yaml:
+# throttleable H2O2 pods, tau 30 ms, Isp 130 s). Controller gains unchanged.
+base: [task_push.yaml, suit_realistic_peroxide.yaml]
